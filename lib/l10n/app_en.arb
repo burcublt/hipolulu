@@ -1,0 +1,132 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "HippoLulu",
+  "@appTitle": { "description": "Application title" },
+
+  "tagline": "✨ Learn · Play · Grow",
+  "@tagline": { "description": "Subtitle under the app name" },
+
+  "chooseGame": "🎮 Choose a Game!",
+  "starsBadge": "3 Stars!",
+  "locked": "Locked",
+  "tapToPlay": "TAP TO PLAY!",
+  "newRibbon": "NEW! 🔥",
+  "comingSoon": "🚀 More games coming soon!",
+
+  "gamePuzzles": "PUZZLES",
+  "gamePuzzlesSub": "Match shapes!",
+  "gameMatching": "MATCHING",
+  "gameMatchingSub": "Find the pairs!",
+  "gameColoring": "COLORING",
+  "gameColoringSub": "Paint & color!",
+  "gameCounting": "COUNTING",
+  "gameCountingSub": "Learn numbers!",
+
+  "languageTitle": "Choose Language",
+  "languageDeviceDefault": "Device language",
+  "languageEnglish": "English",
+  "languageTurkish": "Türkçe",
+  "languageSpanish": "Español",
+
+  "back": "Back",
+  "play": "PLAY!",
+  "playNow": "PLAY NOW!",
+  "moreLabel": "+more",
+
+  "chooseTheme": "Choose a Theme!",
+  "pickYourAdventure": "Pick your adventure 🎨",
+  "themeAnimals": "Animals",
+  "themeVehicles": "Vehicles",
+  "themeShapes": "Shapes",
+  "puzzlesCount": "{count} Puzzles",
+  "@puzzlesCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "unlockAnimalsHint": "🔓 Complete Animals to unlock more!",
+
+  "matchingGameTitle": "Matching Game!",
+  "pickCategoryToMatch": "Pick a category to match",
+  "howToPlayPart1": "Cards show for ",
+  "howToPlayHighlight": "a few seconds",
+  "howToPlayPart2": " — remember them, then find all the matching pairs!",
+  "matchingAnimals": "Animals",
+  "matchingAnimalsDesc": "Match cute animals!",
+  "matchingVehicles": "Vehicles",
+  "matchingVehiclesDesc": "Find the vehicles!",
+  "matchingObjects": "Objects",
+  "matchingObjectsDesc": "Match fun objects!",
+
+  "levelLabel": "Level {number}",
+  "@levelLabel": {
+    "placeholders": { "number": { "type": "int" } }
+  },
+  "pairsProgress": "{matched}/{total} pairs",
+  "@pairsProgress": {
+    "placeholders": {
+      "matched": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "rememberCards": "👀 Remember the cards!",
+  "flipCountdownOne": "They'll flip over in 1 second…",
+  "flipCountdownOther": "They'll flip over in {count} seconds…",
+  "@flipCountdownOther": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "movesCount": "{count} moves",
+  "@movesCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "levelDone": "{level} Done!",
+  "@levelDone": {
+    "placeholders": { "level": { "type": "String" } }
+  },
+  "matchedAllSummary": "You matched all {pairs} pairs in {moves} moves!",
+  "@matchedAllSummary": {
+    "placeholders": {
+      "pairs": { "type": "int" },
+      "moves": { "type": "int" }
+    }
+  },
+  "nextLevel": "🚀 {level} — {cards} cards!",
+  "@nextLevel": {
+    "placeholders": {
+      "level": { "type": "String" },
+      "cards": { "type": "int" }
+    }
+  },
+  "beatAllLevels": "🏆 You beat all levels!",
+  "retry": "🔄 Retry",
+  "menu": "🏠 Menu",
+
+  "pickAnimal": "Pick an Animal! 🐾",
+  "choosePuzzleBuddy": "Choose your puzzle buddy",
+  "animalLion": "Lion",
+  "animalElephant": "Elephant",
+  "animalGiraffe": "Giraffe",
+  "animalTiger": "Tiger",
+  "animalPenguin": "Penguin",
+  "animalRabbit": "Rabbit",
+
+  "puzzleTitle": "{animal} Puzzle 🧩",
+  "@puzzleTitle": {
+    "placeholders": { "animal": { "type": "String" } }
+  },
+  "dragPiecesHint": "Drag the pieces to build the animal!",
+  "assemblyArea": "ASSEMBLY AREA",
+  "dragPiecesAbove": "DRAG THE PIECES ABOVE!",
+  "youDidIt": "You did it!",
+  "puzzleComplete": "{animal} puzzle complete! 🌟",
+  "@puzzleComplete": {
+    "placeholders": { "animal": { "type": "String" } }
+  },
+  "playAgain": "Play Again! 🔄",
+
+  "pieceHead": "Head",
+  "pieceBody": "Body",
+  "pieceTail": "Tail",
+  "pieceLegs": "Legs",
+  "pieceEars": "Ears",
+  "pieceNeck": "Neck"
+}

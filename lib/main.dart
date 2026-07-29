@@ -1,27 +1,62 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
+import 'package:hippolulu/l10n/app_localizations.dart';
+import 'package:hippolulu/language_picker.dart';
+import 'package:hippolulu/locale_provider.dart';
 import 'level_selection.dart';
 import 'animal_selection.dart';
 import 'matching_theme_select.dart';
 import 'matching_game.dart';
 
 // ─────────────────────────────────────────────
-//  ENTRY POINT (demo)
+//  ENTRY POINT
 // ─────────────────────────────────────────────
-void main() => runApp(const HippoLuluApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final localeProvider = LocaleProvider();
+  await localeProvider.load();
+  runApp(HippoLuluApp(localeProvider: localeProvider));
+}
 
 class HippoLuluApp extends StatelessWidget {
-  const HippoLuluApp({Key? key}) : super(key: key);
+  final LocaleProvider localeProvider;
+
+  const HippoLuluApp({Key? key, required this.localeProvider}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'HippoLulu',
-      theme: ThemeData(
-        fontFamily: 'Fredoka Bold',
+    return LocaleProviderScope(
+      notifier: localeProvider,
+      child: ListenableBuilder(
+        listenable: localeProvider,
+        builder: (context, _) {
+          return MaterialApp(
+            title: 'HippoLulu',
+            theme: ThemeData(
+              fontFamily: 'Fredoka Bold',
+            ),
+            debugShowCheckedModeBanner: false,
+            locale: localeProvider.locale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            localeResolutionCallback: (deviceLocale, supportedLocales) {
+              if (localeProvider.locale != null) {
+                return localeProvider.locale!;
+              }
+              if (deviceLocale != null) {
+                for (final supported in supportedLocales) {
+                  if (supported.languageCode == deviceLocale.languageCode) {
+                    return supported;
+                  }
+                }
+              }
+              return const Locale('en');
+            },
+            home: const CustomSplashScreen(),
+          );
+        },
       ),
-      debugShowCheckedModeBanner: false,
-      home: const CustomSplashScreen(),
     );
   }
 }
@@ -136,52 +171,52 @@ class GameMode {
   });
 }
 
-List<GameMode> kGameModes = [
-  GameMode(
-    id: 'puzzles',
-    label: 'PUZZLES',
-    emoji: '🧩',
-    sublabel: 'Match shapes!',
-    bg: const Color(0xFFFFD93D),
-    shadow: const Color(0xFFC49200),
-    outline: const Color(0xFFFFA500),
-    textColor: const Color(0xFF5A3000),
-    locked: false,
-  ),
-  GameMode(
-    id: 'matching',
-    label: 'MATCHING',
-    emoji: '💡',
-    sublabel: 'Find the pairs!',
-    bg: const Color(0xFF7DE87A),
-    shadow: const Color(0xFF1A9418),
-    outline: const Color(0xFF22B820),
-    textColor: const Color(0xFF0A2E00),
-    locked: false,
-  ),
-  GameMode(
-    id: 'coloring',
-    label: 'COLORING',
-    emoji: '🎨',
-    sublabel: 'Paint & color!',
-    bg: const Color(0xFFFF85C2),
-    shadow: const Color(0xFFC03080),
-    outline: const Color(0xFFFF4FA0),
-    textColor: const Color(0xFF4A0030),
-    locked: true,
-  ),
-  GameMode(
-    id: 'counting',
-    label: 'COUNTING',
-    emoji: '🔢',
-    sublabel: 'Learn numbers!',
-    bg: const Color(0xFF64D2FF),
-    shadow: const Color(0xFF0080C8),
-    outline: const Color(0xFF0099FF),
-    textColor: const Color(0xFF003060),
-    locked: true,
-  ),
-];
+List<GameMode> gameModes(AppLocalizations l10n) => [
+      GameMode(
+        id: 'puzzles',
+        label: l10n.gamePuzzles,
+        emoji: '🧩',
+        sublabel: l10n.gamePuzzlesSub,
+        bg: const Color(0xFFFFD93D),
+        shadow: const Color(0xFFC49200),
+        outline: const Color(0xFFFFA500),
+        textColor: const Color(0xFF5A3000),
+        locked: false,
+      ),
+      GameMode(
+        id: 'matching',
+        label: l10n.gameMatching,
+        emoji: '💡',
+        sublabel: l10n.gameMatchingSub,
+        bg: const Color(0xFF7DE87A),
+        shadow: const Color(0xFF1A9418),
+        outline: const Color(0xFF22B820),
+        textColor: const Color(0xFF0A2E00),
+        locked: false,
+      ),
+      GameMode(
+        id: 'coloring',
+        label: l10n.gameColoring,
+        emoji: '🎨',
+        sublabel: l10n.gameColoringSub,
+        bg: const Color(0xFFFF85C2),
+        shadow: const Color(0xFFC03080),
+        outline: const Color(0xFFFF4FA0),
+        textColor: const Color(0xFF4A0030),
+        locked: true,
+      ),
+      GameMode(
+        id: 'counting',
+        label: l10n.gameCounting,
+        emoji: '🔢',
+        sublabel: l10n.gameCountingSub,
+        bg: const Color(0xFF64D2FF),
+        shadow: const Color(0xFF0080C8),
+        outline: const Color(0xFF0099FF),
+        textColor: const Color(0xFF003060),
+        locked: true,
+      ),
+    ];
 
 // ─────────────────────────────────────────────
 //  MAIN MENU
@@ -192,19 +227,21 @@ class MainMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: SceneBackground(
         child: SafeArea(
           child: Column(
             children: [
               // ── TOP BAR ──
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 10, 20, 0),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _StarsBadge(),
-                    _SettingsButton(),
+                    _StarsBadge(starsText: l10n.starsBadge),
+                    const _SettingsButton(),
                   ],
                 ),
               ),
@@ -216,11 +253,11 @@ class MainMenu extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Flexible(
+                    Flexible(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: _TitleStack(),
+                        child: _TitleStack(tagline: l10n.tagline),
                       ),
                     ),
                     _HippoImage(),
@@ -229,9 +266,9 @@ class MainMenu extends StatelessWidget {
               ),
 
               // ── SECTION LABEL ──
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 4, 20, 0),
-                child: _SectionLabel(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                child: _SectionLabel(label: l10n.chooseGame),
               ),
 
               // ── GAME MODE GRID ──
@@ -243,7 +280,7 @@ class MainMenu extends StatelessWidget {
               ),
 
               // ── FOOTER ──
-              const _ComingSoonFooter(),
+              _ComingSoonFooter(text: l10n.comingSoon),
               const SizedBox(height: 18),
             ],
           ),
@@ -257,7 +294,9 @@ class MainMenu extends StatelessWidget {
 //  TOP BAR
 // ─────────────────────────────────────────────
 class _StarsBadge extends StatelessWidget {
-  const _StarsBadge();
+  final String starsText;
+
+  const _StarsBadge({required this.starsText});
 
   @override
   Widget build(BuildContext context) {
@@ -274,14 +313,14 @@ class _StarsBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('⭐', style: TextStyle(fontSize: 16)),
-          SizedBox(width: 5),
+          const Text('⭐', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 5),
           Text(
-            '3 Stars!',
-            style: TextStyle(
+            starsText,
+            style: const TextStyle(
               fontFamily: 'Fredoka',
               fontWeight: FontWeight.w600,
               fontSize: 15,
@@ -308,7 +347,10 @@ class _SettingsButtonState extends State<_SettingsButton> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapDown: (_) => setState(() => _scale = 0.88),
-      onTapUp: (_) => setState(() => _scale = 1.0),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        LanguagePickerSheet.show(context);
+      },
       onTapCancel: () => setState(() => _scale = 1.0),
       child: AnimatedScale(
         scale: _scale,
@@ -327,28 +369,8 @@ class _SettingsButtonState extends State<_SettingsButton> {
               ),
             ],
           ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              const Icon(Icons.settings_rounded,
-                  size: 20, color: Color(0xFF7B6AB0)),
-              Positioned(
-                bottom: -3,
-                right: -3,
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFF5555),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.lock_rounded,
-                      size: 8, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
+          child: const Icon(Icons.language_rounded,
+              size: 22, color: Color(0xFF7B6AB0)),
         ),
       ),
     );
@@ -359,7 +381,9 @@ class _SettingsButtonState extends State<_SettingsButton> {
 //  TITLE STACK
 // ─────────────────────────────────────────────
 class _TitleStack extends StatelessWidget {
-  const _TitleStack();
+  final String tagline;
+
+  const _TitleStack({required this.tagline});
 
   static const _titleStyle = TextStyle(
     fontFamily: 'Fredoka',
@@ -379,16 +403,16 @@ class _TitleStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Hippo', style: _titleStyle),
-        SizedBox(height: 0),
-        Text('Lulu', style: _titleStyle),
-        SizedBox(height: 4),
+        const Text('Hippo', style: _titleStyle),
+        const SizedBox(height: 0),
+        const Text('Lulu', style: _titleStyle),
+        const SizedBox(height: 4),
         Text(
-          '✨ Learn · Play · Grow',
-          style: TextStyle(
+          tagline,
+          style: const TextStyle(
             fontFamily: 'Fredoka',
             fontSize: 14,
             color: Color(0xFF7854B8),
@@ -429,7 +453,9 @@ class _HippoImage extends StatelessWidget {
 //  SECTION LABEL
 // ─────────────────────────────────────────────
 class _SectionLabel extends StatelessWidget {
-  const _SectionLabel();
+  final String label;
+
+  const _SectionLabel({required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -447,9 +473,9 @@ class _SectionLabel extends StatelessWidget {
       children: [
         divider,
         const SizedBox(width: 8),
-        const Text(
-          '🎮 Choose a Game!',
-          style: TextStyle(
+        Text(
+          label,
+          style: const TextStyle(
             fontFamily: 'Fredoka Bold',
             fontSize: 17,
             color: Color(0xFF5C28A0),
@@ -471,6 +497,7 @@ class _GameModeGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final modes = gameModes(AppLocalizations.of(context)!);
     double screenWidth = MediaQuery.of(context).size.width;
     int crossAxisCount = screenWidth > 800 ? 4 : (screenWidth > 500 ? 3 : 2);
 
@@ -483,11 +510,11 @@ class _GameModeGrid extends StatelessWidget {
           mainAxisSpacing: 16,
           childAspectRatio: 1.1, // Makes the cards wider
           physics: const BouncingScrollPhysics(),
-          children: List.generate(kGameModes.length, (i) {
+          children: List.generate(modes.length, (i) {
             return _GameModeCard(
-              mode: kGameModes[i],
+              mode: modes[i],
               index: i,
-              onTap: kGameModes[i].locked ? null : () => onModeSelect(kGameModes[i].id),
+              onTap: modes[i].locked ? null : () => onModeSelect(modes[i].id),
             );
           }),
         ));
@@ -722,9 +749,10 @@ class _GameModeCardState extends State<_GameModeCard>
 
                                 // Lock / Play badge
                                 if (mode.locked)
-                                  _LockBadge()
+                                  _LockBadge(label: AppLocalizations.of(context)!.locked)
                                 else
                                   _PlayBadge(
+                                    label: AppLocalizations.of(context)!.tapToPlay,
                                     textColor: mode.textColor,
                                     controller: _pulseCtrl,
                                   ),
@@ -741,7 +769,10 @@ class _GameModeCardState extends State<_GameModeCard>
                 Positioned(
                   top: -9,
                   right: -4,
-                  child: _NewRibbon(controller: _ribbonCtrl),
+                  child: _NewRibbon(
+                    label: AppLocalizations.of(context)!.newRibbon,
+                    controller: _ribbonCtrl,
+                  ),
                 ),
             ],
           ),
@@ -816,6 +847,10 @@ class _EmojiCircle extends StatelessWidget {
 }
 
 class _LockBadge extends StatelessWidget {
+  final String label;
+
+  const _LockBadge({required this.label});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -824,14 +859,14 @@ class _LockBadge extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.lock_rounded, size: 11, color: Color(0xFF7868A8)),
-          SizedBox(width: 4),
+          const Icon(Icons.lock_rounded, size: 11, color: Color(0xFF7868A8)),
+          const SizedBox(width: 4),
           Text(
-            'Locked',
-            style: TextStyle(
+            label,
+            style: const TextStyle(
               fontFamily: 'Fredoka',
               fontSize: 11,
               color: Color(0xFF7868A8),
@@ -845,10 +880,15 @@ class _LockBadge extends StatelessWidget {
 }
 
 class _PlayBadge extends StatelessWidget {
+  final String label;
   final Color textColor;
   final AnimationController controller;
 
-  const _PlayBadge({required this.textColor, required this.controller});
+  const _PlayBadge({
+    required this.label,
+    required this.textColor,
+    required this.controller,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -865,7 +905,7 @@ class _PlayBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
-          'TAP TO PLAY!',
+          label,
           style: TextStyle(
             fontFamily: 'Fredoka',
             fontSize: 12,
@@ -878,8 +918,10 @@ class _PlayBadge extends StatelessWidget {
 }
 
 class _NewRibbon extends StatelessWidget {
+  final String label;
   final AnimationController controller;
-  const _NewRibbon({required this.controller});
+
+  const _NewRibbon({required this.label, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -912,9 +954,9 @@ class _NewRibbon extends StatelessWidget {
             ),
           ],
         ),
-        child: const Text(
-          'NEW! 🔥',
-          style: TextStyle(
+        child: Text(
+          label,
+          style: const TextStyle(
             fontFamily: 'Fredoka',
             fontSize: 11,
             color: Colors.white,
@@ -929,7 +971,9 @@ class _NewRibbon extends StatelessWidget {
 //  COMING SOON FOOTER
 // ─────────────────────────────────────────────
 class _ComingSoonFooter extends StatefulWidget {
-  const _ComingSoonFooter();
+  final String text;
+
+  const _ComingSoonFooter({required this.text});
 
   @override
   State<_ComingSoonFooter> createState() => _ComingSoonFooterState();
@@ -962,10 +1006,10 @@ class _ComingSoonFooterState extends State<_ComingSoonFooter>
         opacity: 0.5 + 0.5 * _ctrl.value,
         child: child,
       ),
-      child: const Text(
-        '🚀 More games coming soon!',
+      child: Text(
+        widget.text,
         textAlign: TextAlign.center,
-        style: TextStyle(
+        style: const TextStyle(
           fontFamily: 'Fredoka',
           fontSize: 13,
           color: Color(0xFF7854B8),

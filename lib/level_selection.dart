@@ -1,6 +1,7 @@
 import 'main.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:hippolulu/l10n/app_localizations.dart';
 
 // ─────────────────────────────────────────────
 //  THEME DATA
@@ -29,41 +30,41 @@ class PuzzleTheme {
   });
 }
 
-final List<PuzzleTheme> kThemes = [
-  PuzzleTheme(
-    id: 'animals',
-    label: 'Animals',
-    sublabel: '12 Puzzles',
-    gradientColors: [Color(0xFFFFCE7A), Color(0xFFFF9940)],
-    shadow: Color(0xFFD4650A),
-    border: Color(0xFFFFD264).withOpacity(0.6),
-    locked: false,
-    stars: 3,
-    illustration: () => AnimalsIllustration(),
-  ),
-  PuzzleTheme(
-    id: 'vehicles',
-    label: 'Vehicles',
-    sublabel: '12 Puzzles',
-    gradientColors: [Color(0xFF90D0FF), Color(0xFF4A9EE8)],
-    shadow: Color(0xFF2A6AB8),
-    border: Color(0xFF90D0FF).withOpacity(0.5),
-    locked: true,
-    stars: 0,
-    illustration: () => VehiclesIllustration(),
-  ),
-  PuzzleTheme(
-    id: 'shapes',
-    label: 'Shapes',
-    sublabel: '10 Puzzles',
-    gradientColors: [Color(0xFFD4B8F8), Color(0xFF9E78D8)],
-    shadow: Color(0xFF6840B8),
-    border: Color(0xFFC4A8F0).withOpacity(0.5),
-    locked: true,
-    stars: 0,
-    illustration: () => ShapesIllustration(),
-  ),
-];
+List<PuzzleTheme> puzzleThemes(AppLocalizations l10n) => [
+      PuzzleTheme(
+        id: 'animals',
+        label: l10n.themeAnimals,
+        sublabel: l10n.puzzlesCount(12),
+        gradientColors: const [Color(0xFFFFCE7A), Color(0xFFFF9940)],
+        shadow: const Color(0xFFD4650A),
+        border: const Color(0xFFFFD264).withOpacity(0.6),
+        locked: false,
+        stars: 3,
+        illustration: () => AnimalsIllustration(),
+      ),
+      PuzzleTheme(
+        id: 'vehicles',
+        label: l10n.themeVehicles,
+        sublabel: l10n.puzzlesCount(12),
+        gradientColors: const [Color(0xFF90D0FF), Color(0xFF4A9EE8)],
+        shadow: const Color(0xFF2A6AB8),
+        border: const Color(0xFF90D0FF).withOpacity(0.5),
+        locked: true,
+        stars: 0,
+        illustration: () => VehiclesIllustration(),
+      ),
+      PuzzleTheme(
+        id: 'shapes',
+        label: l10n.themeShapes,
+        sublabel: l10n.puzzlesCount(10),
+        gradientColors: const [Color(0xFFD4B8F8), Color(0xFF9E78D8)],
+        shadow: const Color(0xFF6840B8),
+        border: const Color(0xFFC4A8F0).withOpacity(0.5),
+        locked: true,
+        stars: 0,
+        illustration: () => ShapesIllustration(),
+      ),
+    ];
 
 // ─────────────────────────────────────────────
 //  LEVEL SELECTION SCREEN
@@ -76,6 +77,9 @@ class LevelSelection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final themes = puzzleThemes(l10n);
+
     return Scaffold(
       body: SceneBackground(
         child: SafeArea(
@@ -92,8 +96,8 @@ class LevelSelection extends StatelessWidget {
 
               // ── TITLE ──
               Padding(
-                padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-                child: _TitleSection(),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: _TitleSection(l10n: l10n),
               ),
 
               // ── CARDS ──
@@ -102,13 +106,14 @@ class LevelSelection extends StatelessWidget {
                   padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(kThemes.length, (i) {
+                    children: List.generate(themes.length, (i) {
                       return Padding(
-                        padding: EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.only(bottom: 16),
                         child: _ThemeCard(
-                          theme: kThemes[i],
+                          theme: themes[i],
                           index: i,
-                          onTap: kThemes[i].locked ? null : onSelect,
+                          playNowLabel: l10n.playNow,
+                          onTap: themes[i].locked ? null : onSelect,
                         ),
                       );
                     }),
@@ -118,8 +123,8 @@ class LevelSelection extends StatelessWidget {
 
               // ── FOOTER ──
               Padding(
-                padding: EdgeInsets.fromLTRB(20, 0, 20, 28),
-                child: _FooterHint(),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                child: _FooterHint(text: l10n.unlockAnimalsHint),
               ),
             ],
           ),
@@ -175,8 +180,8 @@ class _BackButtonState extends State<_BackButton> {
                   size: 24, color: Color(0xFF5C28A0)),
               SizedBox(width: 2),
               Text(
-                'Back',
-                style: TextStyle(
+                AppLocalizations.of(context)!.back,
+                style: const TextStyle(
                   fontFamily: 'Fredoka One',
                   fontSize: 19,
                   color: Color(0xFF5C28A0),
@@ -194,16 +199,18 @@ class _BackButtonState extends State<_BackButton> {
 //  TITLE SECTION
 // ─────────────────────────────────────────────
 class _TitleSection extends StatelessWidget {
-  _TitleSection();
+  final AppLocalizations l10n;
+
+  const _TitleSection({required this.l10n});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         Text(
-          'Choose a Theme!',
+          l10n.chooseTheme,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: 'Fredoka One',
             fontSize: 36,
             height: 1,
@@ -213,10 +220,10 @@ class _TitleSection extends StatelessWidget {
             ],
           ),
         ),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Text(
-          'Pick your adventure 🎨',
-          style: TextStyle(
+          l10n.pickYourAdventure,
+          style: const TextStyle(
             fontFamily: 'Fredoka',
             fontSize: 16,
             color: Color(0xFF7854B8),
@@ -234,11 +241,13 @@ class _TitleSection extends StatelessWidget {
 class _ThemeCard extends StatefulWidget {
   final PuzzleTheme theme;
   final int index;
+  final String playNowLabel;
   final VoidCallback? onTap;
 
-  _ThemeCard({
+  const _ThemeCard({
     required this.theme,
     required this.index,
+    required this.playNowLabel,
     this.onTap,
   });
 
@@ -493,8 +502,8 @@ class _ThemeCardState extends State<_ThemeCard>
                         ],
                       ),
                       child: Text(
-                        'PLAY NOW!',
-                        style: TextStyle(
+                        widget.playNowLabel,
+                        style: const TextStyle(
                           fontFamily: 'Fredoka One',
                           fontSize: 13,
                           color: Colors.white,
@@ -515,7 +524,9 @@ class _ThemeCardState extends State<_ThemeCard>
 //  FOOTER HINT
 // ─────────────────────────────────────────────
 class _FooterHint extends StatefulWidget {
-  _FooterHint();
+  final String text;
+
+  const _FooterHint({required this.text});
 
   @override
   State<_FooterHint> createState() => _FooterHintState();
@@ -547,9 +558,9 @@ class _FooterHintState extends State<_FooterHint>
       builder: (_, child) =>
           Opacity(opacity: 0.6 + 0.4 * _ctrl.value, child: child),
       child: Text(
-        '🔓 Complete Animals to unlock more!',
+        widget.text,
         textAlign: TextAlign.center,
-        style: TextStyle(
+        style: const TextStyle(
           fontFamily: 'Fredoka',
           fontSize: 14,
           color: Color(0xFF7854B8),

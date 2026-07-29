@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'matching_game.dart';
+import 'package:hippolulu/l10n/app_localizations.dart';
 
 // ─────────────────────────────────────────────
 //  THEME DATA
@@ -24,38 +25,38 @@ class _ThemeData {
   });
 }
 
-final List<_ThemeData> kMatchingThemes = [
-  _ThemeData(
-    id: MatchingTheme.animals,
-    label: 'Animals',
-    emoji: '🐾',
-    desc: 'Match cute animals!',
-    emojis: ['lion.webp', 'cat.webp', 'giraffe.webp'],
-    gradientColors: const [Color(0xFFFFCE7A), Color(0xFFFF9940)],
-    shadow: const Color(0xFFC05000),
-    border: const Color(0xFFFFD250).withValues(alpha: 0.6),
-  ),
-  _ThemeData(
-    id: MatchingTheme.vehicles,
-    label: 'Vehicles',
-    emoji: '🚗',
-    desc: 'Find the vehicles!',
-    emojis: ['🚗', '✈️', '🚂'],
-    gradientColors: const [Color(0xFF90D0FF), Color(0xFF3A9EE0)],
-    shadow: const Color(0xFF1A60B0),
-    border: const Color(0xFF64BEFF).withValues(alpha: 0.6),
-  ),
-  _ThemeData(
-    id: MatchingTheme.objects,
-    label: 'Objects',
-    emoji: '🎁',
-    desc: 'Match fun objects!',
-    emojis: ['🍎', '⭐', '🎈'],
-    gradientColors: const [Color(0xFFD4B8F8), Color(0xFF9E78D8)],
-    shadow: const Color(0xFF6040B8),
-    border: const Color(0xFFC4A8F0).withValues(alpha: 0.6),
-  ),
-];
+List<_ThemeData> matchingThemes(AppLocalizations l10n) => [
+      _ThemeData(
+        id: MatchingTheme.animals,
+        label: l10n.matchingAnimals,
+        emoji: '🐾',
+        desc: l10n.matchingAnimalsDesc,
+        emojis: ['lion.webp', 'cat.webp', 'giraffe.webp'],
+        gradientColors: const [Color(0xFFFFCE7A), Color(0xFFFF9940)],
+        shadow: const Color(0xFFC05000),
+        border: const Color(0xFFFFD250).withValues(alpha: 0.6),
+      ),
+      _ThemeData(
+        id: MatchingTheme.vehicles,
+        label: l10n.matchingVehicles,
+        emoji: '🚗',
+        desc: l10n.matchingVehiclesDesc,
+        emojis: ['🚗', '✈️', '🚂'],
+        gradientColors: const [Color(0xFF90D0FF), Color(0xFF3A9EE0)],
+        shadow: const Color(0xFF1A60B0),
+        border: const Color(0xFF64BEFF).withValues(alpha: 0.6),
+      ),
+      _ThemeData(
+        id: MatchingTheme.objects,
+        label: l10n.matchingObjects,
+        emoji: '🎁',
+        desc: l10n.matchingObjectsDesc,
+        emojis: ['🍎', '⭐', '🎈'],
+        gradientColors: const [Color(0xFFD4B8F8), Color(0xFF9E78D8)],
+        shadow: const Color(0xFF6040B8),
+        border: const Color(0xFFC4A8F0).withValues(alpha: 0.6),
+      ),
+    ];
 
 // ─────────────────────────────────────────────
 //  MATCHING THEME SELECT SCREEN
@@ -72,6 +73,9 @@ class MatchingThemeSelect extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final themes = matchingThemes(l10n);
+
     return Scaffold(
       body: SceneBackground(
         child: SafeArea(
@@ -88,9 +92,9 @@ class MatchingThemeSelect extends StatelessWidget {
               ),
 
               // ── TITLE ──
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
-                child: _TitleSection(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: _TitleSection(l10n: l10n),
               ),
 
               // ── HOW TO PLAY BANNER ──
@@ -110,8 +114,8 @@ class MatchingThemeSelect extends StatelessWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: RichText(
-                          text: const TextSpan(
-                            style: TextStyle(
+                          text: TextSpan(
+                            style: const TextStyle(
                               fontFamily: 'Fredoka',
                               fontSize: 13,
                               color: Color(0xFF5C28A0),
@@ -119,14 +123,13 @@ class MatchingThemeSelect extends StatelessWidget {
                               height: 1.4,
                             ),
                             children: [
-                              TextSpan(text: 'Cards show for '),
+                              TextSpan(text: l10n.howToPlayPart1),
                               TextSpan(
-                                text: '10 seconds',
-                                style: TextStyle(color: Color(0xFFFF5500)),
+                                text: l10n.howToPlayHighlight,
+                                style:
+                                    const TextStyle(color: Color(0xFFFF5500)),
                               ),
-                              TextSpan(
-                                  text:
-                                      ' — remember them, then find all the matching pairs!'),
+                              TextSpan(text: l10n.howToPlayPart2),
                             ],
                           ),
                         ),
@@ -142,11 +145,14 @@ class MatchingThemeSelect extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
                   child: ListView(
                     physics: const BouncingScrollPhysics(),
-                    children: kMatchingThemes
+                    children: themes
                         .map((t) => Padding(
                               padding: const EdgeInsets.only(bottom: 14),
                               child: _ThemeCard(
-                                  theme: t, onTap: () => onSelect(t.id)),
+                                theme: t,
+                                moreLabel: l10n.moreLabel,
+                                onTap: () => onSelect(t.id),
+                              ),
                             ))
                         .toList(),
                   ),
@@ -196,14 +202,14 @@ class _BackButtonState extends State<_BackButton> {
                   offset: const Offset(0, 4))
             ],
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.chevron_left_rounded,
+              const Icon(Icons.chevron_left_rounded,
                   size: 24, color: Color(0xFF5C28A0)),
-              SizedBox(width: 2),
-              Text('Back',
-                  style: TextStyle(
+              const SizedBox(width: 2),
+              Text(AppLocalizations.of(context)!.back,
+                  style: const TextStyle(
                       fontFamily: 'Fredoka One',
                       fontSize: 19,
                       color: Color(0xFF5C28A0))),
@@ -219,24 +225,26 @@ class _BackButtonState extends State<_BackButton> {
 //  TITLE SECTION
 // ─────────────────────────────────────────────
 class _TitleSection extends StatelessWidget {
-  const _TitleSection();
+  final AppLocalizations l10n;
+
+  const _TitleSection({required this.l10n});
+
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       children: [
-        Text('💡', style: TextStyle(fontSize: 52)),
-        SizedBox(height: 6),
-        Text('Matching Game!',
+        const SizedBox(height: 6),
+        Text(l10n.matchingGameTitle,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Fredoka One',
+            style: const TextStyle(
+              fontFamily: 'Fredoka Bold',
               fontSize: 34,
               color: Color(0xFF5C28A0),
               shadows: [Shadow(color: Color(0xFFD0A8F0), offset: Offset(0, 4))],
             )),
-        SizedBox(height: 4),
-        Text('Pick a category to match',
-            style: TextStyle(
+        const SizedBox(height: 4),
+        Text(l10n.pickCategoryToMatch,
+            style: const TextStyle(
               fontFamily: 'Fredoka',
               fontSize: 15,
               color: Color(0xFF7854B8),
@@ -252,8 +260,14 @@ class _TitleSection extends StatelessWidget {
 // ─────────────────────────────────────────────
 class _ThemeCard extends StatefulWidget {
   final _ThemeData theme;
+  final String moreLabel;
   final VoidCallback onTap;
-  const _ThemeCard({required this.theme, required this.onTap});
+
+  const _ThemeCard({
+    required this.theme,
+    required this.moreLabel,
+    required this.onTap,
+  });
   @override
   State<_ThemeCard> createState() => _ThemeCardState();
 }
@@ -403,8 +417,8 @@ class _ThemeCardState extends State<_ThemeCard> {
                                           Colors.white.withValues(alpha: 0.28),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Text('+more',
-                                        style: TextStyle(
+                                    child: Text(widget.moreLabel,
+                                        style: const TextStyle(
                                           fontFamily: 'Fredoka',
                                           fontSize: 13,
                                           color: Colors.white,

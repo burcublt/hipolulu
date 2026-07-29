@@ -2,23 +2,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 // ─────────────────────────────────────────────
-//  ENTRY POINT (demo)
-// ─────────────────────────────────────────────
-void main() => runApp(const HippoLuluApp());
-
-class HippoLuluApp extends StatelessWidget {
-  const HippoLuluApp({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'HippoLulu',
-      debugShowCheckedModeBanner: false,
-      home: PuzzleArena(animal: AnimalId.lion, onBack: () {}),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────
 //  ANIMAL ID
 // ─────────────────────────────────────────────
 enum AnimalId { lion, elephant, giraffe }

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:hippolulu/l10n/app_localizations.dart';
+import 'package:hippolulu/l10n/game_l10n.dart';
 
 // ─────────────────────────────────────────────
 //  MATCHING THEME TYPE
@@ -80,19 +82,20 @@ const Map<MatchingTheme, _ThemeColors> kThemeColors = {
 //  LEVEL DEFINITIONS
 // ─────────────────────────────────────────────
 class _Level {
-  final int pairs, cols;
-  final String label;
-  const _Level({required this.pairs, required this.cols, required this.label});
+  final int pairs, previewSeconds, number;
+  const _Level({
+    required this.pairs,
+    required this.previewSeconds,
+    required this.number,
+  });
 }
 
 const List<_Level> kLevels = [
-  _Level(pairs: 5, cols: 3, label: 'Level 1'),
-  _Level(pairs: 6, cols: 3, label: 'Level 2'),
-  _Level(pairs: 8, cols: 3, label: 'Level 3'),
-  _Level(pairs: 10, cols: 3, label: 'Level 4'),
+  _Level(pairs: 5, previewSeconds: 10, number: 1),
+  _Level(pairs: 6, previewSeconds: 12, number: 2),
+  _Level(pairs: 8, previewSeconds: 14, number: 3),
+  _Level(pairs: 10, previewSeconds: 16, number: 4),
 ];
-
-const int kPreviewSeconds = 10;
 
 // ─────────────────────────────────────────────
 //  CARD STATE
@@ -144,7 +147,7 @@ class _MatchingGameState extends State<MatchingGame>
   int _levelIdx = 0;
   late List<CardState> _cards;
   Phase _phase = Phase.preview;
-  int _countdown = kPreviewSeconds;
+  int _countdown = 0;
   final List<String> _selected = [];
   final Set<String> _matched = {};
   bool _disabled = false;
@@ -176,7 +179,7 @@ class _MatchingGameState extends State<MatchingGame>
       _cards = buildCards(
           widget.theme, kLevels[idx.clamp(0, kLevels.length - 1)].pairs);
       _phase = Phase.preview;
-      _countdown = kPreviewSeconds;
+      _countdown = kLevels[idx.clamp(0, kLevels.length - 1)].previewSeconds;
       _selected.clear();
       _matched.clear();
       _disabled = false;
@@ -249,14 +252,10 @@ class _MatchingGameState extends State<MatchingGame>
 
   @override
   Widget build(BuildContext context) {
-    final screenW = MediaQuery.of(context).size.width;
-    const gap = 8.0, hpad = 16.0;
-    final cols = _level.cols;
-    final cardW =
-        ((screenW - hpad * 2 - gap * (cols - 1)) / cols).floorToDouble();
-    final cardH = (cardW * 1.25).roundToDouble();
+    final l10n = AppLocalizations.of(context)!;
     final col = kThemeColors[widget.theme]!;
     final stars = calcStars(_moves, _level.pairs);
+    final levelLabel = l10n.levelLabel(_level.number);
 
     return Scaffold(
       body: Container(
@@ -324,13 +323,14 @@ class _MatchingGameState extends State<MatchingGame>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(_level.label,
+                              Text(levelLabel,
                                   style: const TextStyle(
-                                      fontFamily: 'Fredoka One',
+                                      fontFamily: 'Fredoka Bold',
                                       fontSize: 16,
                                       color: Color(0xFF5C28A0))),
                               const SizedBox(width: 6),
-                              Text('· ${_matched.length}/${_level.pairs} pairs',
+                              Text(
+                                  '· ${l10n.pairsProgress(_matched.length, _level.pairs)}',
                                   style: const TextStyle(
                                       fontFamily: 'Fredoka',
                                       fontSize: 13,
@@ -349,38 +349,73 @@ class _MatchingGameState extends State<MatchingGame>
                     child: _phase == Phase.preview
                         ? _PreviewBanner(
                             countdown: _countdown,
+                            total: _level.previewSeconds,
                             key: const ValueKey('preview'))
                         : _PlayingHeader(
                             matched: _matched.length,
                             total: _level.pairs,
                             moves: _moves,
+                            movesLabel: l10n.movesCount(_moves),
                             key: const ValueKey('playing')),
                   ),
 
                   // ── CARD GRID ──
                   Expanded(
-                    child: Center(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: hpad, vertical: 8),
-                        child: Wrap(
-                          spacing: gap,
-                          runSpacing: gap,
-                          alignment: WrapAlignment.center,
-                          children: _cards
-                              .map((card) => _MemoryCard(
-                                    card: card,
-                                    faceUp: _isFaceUp(card),
-                                    matched: _matched.contains(card.pairId),
-                                    disabled: _disabled,
-                                    cardW: cardW,
-                                    cardH: cardH,
-                                    themeColors: col,
-                                    onTap: () => _handleCardTap(card.id),
-                                  ))
-                              .toList(),
-                        ),
-                      ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        const gap = 8.0;
+                        const hpad = 16.0;
+                        const vpad = 8.0;
+
+                        final availableW = constraints.maxWidth - hpad * 2;
+                        final availableH = constraints.maxHeight - vpad * 2;
+
+                        int bestCols = 2;
+                        double bestCardW = 0;
+                        final numCards = _cards.length;
+
+                        for (int cols = 2; cols <= numCards; cols++) {
+                          final rows = (numCards / cols).ceil();
+                          final wByWidth =
+                              (availableW - gap * (cols - 1)) / cols;
+                          final hByHeight =
+                              (availableH - gap * (rows - 1)) / rows;
+                          final wByHeight = hByHeight / 1.25;
+
+                          final w = min(wByWidth, wByHeight);
+                          if (w > bestCardW) {
+                            bestCardW = w;
+                            bestCols = cols;
+                          }
+                        }
+
+                        final cardW = bestCardW.floorToDouble();
+                        final cardH = (cardW * 1.25).floorToDouble();
+
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: hpad, vertical: vpad),
+                            child: Wrap(
+                              spacing: gap,
+                              runSpacing: gap,
+                              alignment: WrapAlignment.center,
+                              children: _cards
+                                  .map((card) => _MemoryCard(
+                                        card: card,
+                                        faceUp: _isFaceUp(card),
+                                        matched: _matched.contains(card.pairId),
+                                        disabled: _disabled,
+                                        cardW: cardW,
+                                        cardH: cardH,
+                                        themeColors: col,
+                                        onTap: () => _handleCardTap(card.id),
+                                      ))
+                                  .toList(),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -441,12 +476,12 @@ class _BackButtonState extends State<_BackButton> {
                   offset: const Offset(0, 4))
             ],
           ),
-          child: const Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.chevron_left_rounded,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.chevron_left_rounded,
                 size: 22, color: Color(0xFF5C28A0)),
-            SizedBox(width: 2),
-            Text('Back',
-                style: TextStyle(
+            const SizedBox(width: 2),
+            Text(AppLocalizations.of(context)!.back,
+                style: const TextStyle(
                     fontFamily: 'Fredoka One',
                     fontSize: 17,
                     color: Color(0xFF5C28A0))),
@@ -462,10 +497,13 @@ class _BackButtonState extends State<_BackButton> {
 // ─────────────────────────────────────────────
 class _PreviewBanner extends StatelessWidget {
   final int countdown;
-  const _PreviewBanner({required this.countdown, super.key});
+  final int total;
+  const _PreviewBanner(
+      {required this.countdown, required this.total, super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Container(
@@ -483,21 +521,20 @@ class _PreviewBanner extends StatelessWidget {
         ),
         child: Row(
           children: [
-            _CountdownRing(value: countdown, total: kPreviewSeconds),
+            _CountdownRing(value: countdown, total: total),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('👀 Remember the cards!',
-                      style: TextStyle(
+                  Text(l10n.rememberCards,
+                      style: const TextStyle(
                           fontFamily: 'Fredoka One',
                           fontSize: 17,
                           color: Color(0xFF4A2800),
                           height: 1.2)),
                   const SizedBox(height: 3),
-                  Text(
-                      "They'll flip over in $countdown second${countdown != 1 ? 's' : ''}…",
+                  Text(l10n.flipCountdown(countdown),
                       style: const TextStyle(
                           fontFamily: 'Fredoka',
                           fontSize: 13,
@@ -549,7 +586,7 @@ class _CountdownRing extends StatelessWidget {
           ),
           Text('$value',
               style: TextStyle(
-                fontFamily: 'Fredoka One',
+                fontFamily: 'Fredoka Bold',
                 fontSize: 26,
                 color: color,
                 shadows: const [
@@ -610,11 +647,15 @@ class _RingPainter extends CustomPainter {
 // ─────────────────────────────────────────────
 class _PlayingHeader extends StatelessWidget {
   final int matched, total, moves;
-  const _PlayingHeader(
-      {required this.matched,
-      required this.total,
-      required this.moves,
-      super.key});
+  final String movesLabel;
+
+  const _PlayingHeader({
+    required this.matched,
+    required this.total,
+    required this.moves,
+    required this.movesLabel,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -655,7 +696,7 @@ class _PlayingHeader extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(999),
             ),
-            child: Text('🎯 $moves moves',
+            child: Text('🎯 $movesLabel',
                 style: const TextStyle(
                     fontFamily: 'Fredoka',
                     fontSize: 13,
@@ -924,6 +965,12 @@ class _WinOverlayState extends State<_WinOverlay>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final levelLabel = l10n.levelLabel(widget.level.number);
+    final nextLevel = widget.levelIdx < kLevels.length - 1
+        ? kLevels[widget.levelIdx + 1]
+        : null;
+
     return FadeTransition(
       opacity: _entryCtrl,
       child: Container(
@@ -951,7 +998,7 @@ class _WinOverlayState extends State<_WinOverlay>
                   ),
                   const SizedBox(height: 12),
 
-                  Text('${widget.level.label} Done!',
+                  Text(l10n.levelDone(levelLabel),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontFamily: 'Fredoka One',
@@ -964,7 +1011,8 @@ class _WinOverlayState extends State<_WinOverlay>
 
                   const SizedBox(height: 4),
                   Text(
-                      'You matched all ${widget.level.pairs} pairs in ${widget.moves} moves!',
+                      l10n.matchedAllSummary(
+                          widget.level.pairs, widget.moves),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                           fontFamily: 'Fredoka',
@@ -998,18 +1046,20 @@ class _WinOverlayState extends State<_WinOverlay>
                   const SizedBox(height: 20),
 
                   // Next Level button
-                  if (widget.levelIdx < kLevels.length - 1)
+                  if (nextLevel != null)
                     _WinButton(
-                      label:
-                          '🚀 ${kLevels[widget.levelIdx + 1].label} — ${kLevels[widget.levelIdx + 1].pairs * 2} cards!',
+                      label: l10n.nextLevel(
+                        l10n.levelLabel(nextLevel.number),
+                        nextLevel.pairs * 2,
+                      ),
                       primary: true,
                       onTap: widget.onNextLevel,
                     ),
                   if (widget.levelIdx >= kLevels.length - 1)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 10),
-                      child: Text('🏆 You beat all levels!',
-                          style: TextStyle(
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(l10n.beatAllLevels,
+                          style: const TextStyle(
                               fontFamily: 'Fredoka One',
                               fontSize: 18,
                               color: Colors.white)),
@@ -1020,13 +1070,13 @@ class _WinOverlayState extends State<_WinOverlay>
                     children: [
                       Expanded(
                           child: _WinButton(
-                              label: '🔄 Retry',
+                              label: l10n.retry,
                               primary: false,
                               onTap: widget.onRetry)),
                       const SizedBox(width: 10),
                       Expanded(
                           child: _WinButton(
-                              label: '🏠 Menu',
+                              label: l10n.menu,
                               primary: false,
                               onTap: widget.onBack)),
                     ],
