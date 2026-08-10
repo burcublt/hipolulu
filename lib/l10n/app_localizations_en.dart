@@ -93,10 +93,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeAnimals => 'Animals';
 
   @override
+  String get themefruitsAndVegetables => 'Fruits & Vegetables';
+
+  @override
   String get themeVehicles => 'Vehicles';
 
   @override
   String get themeShapes => 'Shapes';
+
+  @override
+  String get themeFruits => 'Fruits';
+
+  @override
+  String get themeVegetables => 'Vegetables';
 
   @override
   String puzzlesCount(int count) {
@@ -127,6 +136,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get matchingAnimalsDesc => 'Match cute animals!';
+
+  @override
+  String get matchingFruits => 'Fruits';
+
+  @override
+  String get matchingFruitsDesc => 'Match yummy fruits!';
+
+  @override
+  String get matchingVegetables => 'Vegetables';
+
+  @override
+  String get matchingVegetablesDesc => 'Match healthy food!';
+
+  @override
+  String get matchingFruitAndVegetablesDesc => 'Match tasty treats!';
+
+  @override
+  String get matchingFoods => 'Foods';
+
+  @override
+  String get matchingFoodsDesc => 'Match delicious foods!';
 
   @override
   String get matchingVehicles => 'Vehicles';

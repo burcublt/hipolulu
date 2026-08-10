@@ -29,22 +29,68 @@ List<_ThemeData> matchingThemes(AppLocalizations l10n) => [
       _ThemeData(
         id: MatchingTheme.animals,
         label: l10n.matchingAnimals,
-        emoji: '🐾',
+        emoji: 'animals/lion.webp',
         desc: l10n.matchingAnimalsDesc,
-        emojis: ['lion.webp', 'cat.webp', 'giraffe.webp'],
+        emojis: [
+          'animals/lion.webp',
+          'animals/cat.webp',
+          'animals/giraffe.webp'
+        ],
         gradientColors: const [Color(0xFFFFCE7A), Color(0xFFFF9940)],
         shadow: const Color(0xFFC05000),
         border: const Color(0xFFFFD250).withValues(alpha: 0.6),
       ),
       _ThemeData(
+        id: MatchingTheme.fruits,
+        label: l10n.matchingFruits,
+        emoji: 'fruits/apple.webp',
+        desc: l10n.matchingFruitsDesc,
+        emojis: [
+          'fruits/apple.webp',
+          'fruits/banana.webp',
+          'fruits/orange.webp'
+        ],
+        gradientColors: const [Color(0xFFFFB2D1), Color(0xFFE85B93)],
+        shadow: const Color(0xFFB02A60),
+        border: const Color(0xFFFFC4DD).withValues(alpha: 0.6),
+      ),
+      _ThemeData(
+        id: MatchingTheme.vegetables,
+        label: l10n.matchingVegetables,
+        emoji: 'vegetables/carrot.webp',
+        desc: l10n.matchingVegetablesDesc,
+        emojis: [
+          'vegetables/carrot.webp',
+          'vegetables/tomato.webp',
+          'vegetables/cucumber.webp',
+        ],
+        gradientColors: const [Color(0xFF76D7C4), Color(0xFF1ABC9C)],
+        shadow: const Color(0xFF117A65),
+        border: const Color(0xFF8CE4D3).withValues(alpha: 0.6),
+      ),
+      _ThemeData(
         id: MatchingTheme.vehicles,
         label: l10n.matchingVehicles,
-        emoji: '🚗',
+        emoji: 'vehicles/car.webp',
         desc: l10n.matchingVehiclesDesc,
-        emojis: ['🚗', '✈️', '🚂'],
+        emojis: [
+          'vehicles/car.webp',
+          'vehicles/airplane.webp',
+          'vehicles/train.webp'
+        ],
         gradientColors: const [Color(0xFF90D0FF), Color(0xFF3A9EE0)],
         shadow: const Color(0xFF1A60B0),
         border: const Color(0xFF64BEFF).withValues(alpha: 0.6),
+      ),
+      _ThemeData(
+        id: MatchingTheme.foods,
+        label: l10n.matchingFoods,
+        emoji: 'foods/bread.webp',
+        desc: l10n.matchingFoodsDesc,
+        emojis: ['foods/bread.webp', 'foods/cheese.webp', 'foods/pizza.webp'],
+        gradientColors: const [Color(0xFFFFF176), Color(0xFFFBC02D)],
+        shadow: const Color(0xFFB88600),
+        border: const Color(0xFFFFF59D).withValues(alpha: 0.6),
       ),
       _ThemeData(
         id: MatchingTheme.objects,
@@ -75,90 +121,103 @@ class MatchingThemeSelect extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final themes = matchingThemes(l10n);
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Scaffold(
       body: SceneBackground(
         child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── TOP BAR ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: _BackButton(onTap: onBack),
-                ),
-              ),
-
-              // ── TITLE ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                child: _TitleSection(l10n: l10n),
-              ),
-
-              // ── HOW TO PLAY BANNER ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.7), width: 2),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── TOP BAR ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _BackButton(onTap: onBack),
                   ),
-                  child: Row(
-                    children: [
-                      const Text('👀', style: TextStyle(fontSize: 28)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: RichText(
-                          text: TextSpan(
-                            style: const TextStyle(
-                              fontFamily: 'Fredoka',
-                              fontSize: 13,
-                              color: Color(0xFF5C28A0),
-                              fontWeight: FontWeight.w600,
-                              height: 1.4,
-                            ),
-                            children: [
-                              TextSpan(text: l10n.howToPlayPart1),
-                              TextSpan(
-                                text: l10n.howToPlayHighlight,
-                                style:
-                                    const TextStyle(color: Color(0xFFFF5500)),
+                ),
+
+                // ── TITLE ──
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20, isLandscape ? 5 : 20, 20, 0),
+                  child: _TitleSection(l10n: l10n, isLandscape: isLandscape),
+                ),
+
+                // ── HOW TO PLAY BANNER ──
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20, isLandscape ? 5 : 14, 20, 0),
+                  child: Container(
+                    padding: EdgeInsets.fromLTRB(
+                        16, isLandscape ? 8 : 12, 16, isLandscape ? 8 : 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.7), width: 2),
+                    ),
+                    child: Row(
+                      children: [
+                        Text('👀',
+                            style: TextStyle(fontSize: isLandscape ? 20 : 28)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              style: TextStyle(
+                                fontFamily: 'Fredoka',
+                                fontSize: isLandscape ? 11 : 13,
+                                color: const Color(0xFF5C28A0),
+                                fontWeight: FontWeight.w600,
+                                height: 1.4,
                               ),
-                              TextSpan(text: l10n.howToPlayPart2),
-                            ],
+                              children: [
+                                TextSpan(text: l10n.howToPlayPart1),
+                                TextSpan(
+                                  text: l10n.howToPlayHighlight,
+                                  style:
+                                      const TextStyle(color: Color(0xFFFF5500)),
+                                ),
+                                TextSpan(text: l10n.howToPlayPart2),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // ── THEME CARDS ──
-              Expanded(
-                child: Padding(
+                // ── THEME CARDS ──
+                Padding(
                   padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
-                  child: ListView(
-                    physics: const BouncingScrollPhysics(),
-                    children: themes
-                        .map((t) => Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              child: _ThemeCard(
-                                theme: t,
-                                moreLabel: l10n.moreLabel,
-                                onTap: () => onSelect(t.id),
-                              ),
-                            ))
-                        .toList(),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      bool isWide = constraints.maxWidth > 500;
+                      return Wrap(
+                        spacing: 14,
+                        runSpacing: 14,
+                        children: themes.map((t) {
+                          return SizedBox(
+                            width: isWide
+                                ? (constraints.maxWidth - 14) / 2
+                                : constraints.maxWidth,
+                            child: _ThemeCard(
+                              theme: t,
+                              moreLabel: l10n.moreLabel,
+                              onTap: () => onSelect(t.id),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -226,28 +285,31 @@ class _BackButtonState extends State<_BackButton> {
 // ─────────────────────────────────────────────
 class _TitleSection extends StatelessWidget {
   final AppLocalizations l10n;
+  final bool isLandscape;
 
-  const _TitleSection({required this.l10n});
+  const _TitleSection({required this.l10n, this.isLandscape = false});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const SizedBox(height: 6),
+        SizedBox(height: isLandscape ? 0 : 6),
         Text(l10n.matchingGameTitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Fredoka Bold',
-              fontSize: 34,
-              color: Color(0xFF5C28A0),
-              shadows: [Shadow(color: Color(0xFFD0A8F0), offset: Offset(0, 4))],
+              fontSize: isLandscape ? 26 : 34,
+              color: const Color(0xFF5C28A0),
+              shadows: const [
+                Shadow(color: Color(0xFFD0A8F0), offset: Offset(0, 4))
+              ],
             )),
-        const SizedBox(height: 4),
+        SizedBox(height: isLandscape ? 0 : 4),
         Text(l10n.pickCategoryToMatch,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Fredoka',
-              fontSize: 15,
-              color: Color(0xFF7854B8),
+              fontSize: isLandscape ? 13 : 15,
+              color: const Color(0xFF7854B8),
               fontWeight: FontWeight.w500,
             )),
       ],
@@ -358,8 +420,12 @@ class _ThemeCardState extends State<_ThemeCard> {
                             ],
                           ),
                           child: Center(
-                              child: Text(t.emoji,
-                                  style: const TextStyle(fontSize: 36))),
+                              child: t.emoji.endsWith('.webp') ||
+                                      t.emoji.endsWith('.png')
+                                  ? Image.asset('assets/images/${t.emoji}',
+                                      width: 42, height: 42)
+                                  : Text(t.emoji,
+                                      style: const TextStyle(fontSize: 36))),
                         ),
                         const SizedBox(width: 16),
                         // Text
@@ -369,7 +435,7 @@ class _ThemeCardState extends State<_ThemeCard> {
                             children: [
                               Text(t.label,
                                   style: const TextStyle(
-                                    fontFamily: 'Fredoka One',
+                                    fontFamily: 'Fredoka Bold',
                                     fontSize: 24,
                                     color: Colors.white,
                                     shadows: [
@@ -464,6 +530,8 @@ class SceneBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
+      height: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,

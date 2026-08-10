@@ -268,6 +268,12 @@ abstract class AppLocalizations {
   /// **'Animals'**
   String get themeAnimals;
 
+  /// No description provided for @themefruitsAndVegetables.
+  ///
+  /// In en, this message translates to:
+  /// **'Fruits & Vegetables'**
+  String get themefruitsAndVegetables;
+
   /// No description provided for @themeVehicles.
   ///
   /// In en, this message translates to:
@@ -279,6 +285,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shapes'**
   String get themeShapes;
+
+  /// No description provided for @themeFruits.
+  ///
+  /// In en, this message translates to:
+  /// **'Fruits'**
+  String get themeFruits;
+
+  /// No description provided for @themeVegetables.
+  ///
+  /// In en, this message translates to:
+  /// **'Vegetables'**
+  String get themeVegetables;
 
   /// No description provided for @puzzlesCount.
   ///
@@ -333,6 +351,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Match cute animals!'**
   String get matchingAnimalsDesc;
+
+  /// No description provided for @matchingFruits.
+  ///
+  /// In en, this message translates to:
+  /// **'Fruits'**
+  String get matchingFruits;
+
+  /// No description provided for @matchingFruitsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Match yummy fruits!'**
+  String get matchingFruitsDesc;
+
+  /// No description provided for @matchingVegetables.
+  ///
+  /// In en, this message translates to:
+  /// **'Vegetables'**
+  String get matchingVegetables;
+
+  /// No description provided for @matchingVegetablesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Match healthy food!'**
+  String get matchingVegetablesDesc;
+
+  /// No description provided for @matchingFruitAndVegetablesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Match tasty treats!'**
+  String get matchingFruitAndVegetablesDesc;
+
+  /// No description provided for @matchingFoods.
+  ///
+  /// In en, this message translates to:
+  /// **'Foods'**
+  String get matchingFoods;
+
+  /// No description provided for @matchingFoodsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Match delicious foods!'**
+  String get matchingFoodsDesc;
 
   /// No description provided for @matchingVehicles.
   ///

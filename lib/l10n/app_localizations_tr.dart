@@ -93,10 +93,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String get themeAnimals => 'Hayvanlar';
 
   @override
+  String get themefruitsAndVegetables => 'Meyve ve Sebzeler';
+
+  @override
   String get themeVehicles => 'Taşıtlar';
 
   @override
   String get themeShapes => 'Şekiller';
+
+  @override
+  String get themeFruits => 'Meyveler';
+
+  @override
+  String get themeVegetables => 'Sebzeler';
 
   @override
   String puzzlesCount(int count) {
@@ -127,6 +136,28 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get matchingAnimalsDesc => 'Sevimli hayvanları eşleştir!';
+
+  @override
+  String get matchingFruits => 'Meyveler';
+
+  @override
+  String get matchingFruitsDesc => 'Tatlı meyveleri eşleştir!';
+
+  @override
+  String get matchingVegetables => 'Sebzeler';
+
+  @override
+  String get matchingVegetablesDesc => 'Sağlıklı sebzeleri eşleştir!';
+
+  @override
+  String get matchingFruitAndVegetablesDesc =>
+      'Tatlı meyve ve sebzeleri eşleştir!';
+
+  @override
+  String get matchingFoods => 'Yemekler';
+
+  @override
+  String get matchingFoodsDesc => 'Lezzetli yemekleri eşleştir!';
 
   @override
   String get matchingVehicles => 'Taşıtlar';

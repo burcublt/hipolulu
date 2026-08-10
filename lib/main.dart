@@ -5,9 +5,11 @@ import 'package:hippolulu/l10n/app_localizations.dart';
 import 'package:hippolulu/language_picker.dart';
 import 'package:hippolulu/locale_provider.dart';
 import 'level_selection.dart';
-import 'animal_selection.dart';
+import 'puzzle_item_selection.dart';
 import 'matching_theme_select.dart';
 import 'matching_game.dart';
+import 'puzzle_arena.dart';
+import 'asset_service.dart';
 
 // ─────────────────────────────────────────────
 //  ENTRY POINT
@@ -16,13 +18,15 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final localeProvider = LocaleProvider();
   await localeProvider.load();
+  await AssetService().load();
   runApp(HippoLuluApp(localeProvider: localeProvider));
 }
 
 class HippoLuluApp extends StatelessWidget {
   final LocaleProvider localeProvider;
 
-  const HippoLuluApp({Key? key, required this.localeProvider}) : super(key: key);
+  const HippoLuluApp({Key? key, required this.localeProvider})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -86,14 +90,13 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> {
                     MaterialPageRoute(
                       builder: (navCtx) => LevelSelection(
                         onBack: () => Navigator.of(navCtx).pop(),
-                        onSelect: () {
+                        onSelect: (theme) {
                           Navigator.of(navCtx).push(
                             MaterialPageRoute(
-                              builder: (animalCtx) => AnimalSelection(
-                                onBack: () => Navigator.of(animalCtx).pop(),
-                                onSelect: (animalId) {
-                                  // TODO: Implement gameplay for specific animal
-                                },
+                              builder: (selectionCtx) => PuzzleItemSelection(
+                                themeId: theme.id,
+                                themeTitle: theme.label,
+                                onBack: () => Navigator.of(selectionCtx).pop(),
                               ),
                             ),
                           );
@@ -232,9 +235,11 @@ class MainMenu extends StatelessWidget {
     return Scaffold(
       body: SceneBackground(
         child: SafeArea(
-          child: Column(
-            children: [
-              // ── TOP BAR ──
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                // ── TOP BAR ──
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
                 child: Row(
@@ -272,17 +277,16 @@ class MainMenu extends StatelessWidget {
               ),
 
               // ── GAME MODE GRID ──
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                  child: _GameModeGrid(onModeSelect: onModeSelect),
-                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                child: _GameModeGrid(onModeSelect: onModeSelect),
               ),
 
               // ── FOOTER ──
               _ComingSoonFooter(text: l10n.comingSoon),
               const SizedBox(height: 18),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -385,37 +389,37 @@ class _TitleStack extends StatelessWidget {
 
   const _TitleStack({required this.tagline});
 
-  static const _titleStyle = TextStyle(
-    fontFamily: 'Fredoka',
-    fontSize: 44,
-    height: 1.0,
-    color: Color(0xFF5C28A0),
-    letterSpacing: 1,
-    shadows: [
-      Shadow(color: Color(0xFFD0A8F0), offset: Offset(0, 4)),
-      Shadow(
-        color: Color(0x2E5C28A0),
-        offset: Offset(0, 6),
-        blurRadius: 14,
-      ),
-    ],
-  );
-
   @override
   Widget build(BuildContext context) {
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final titleStyle = TextStyle(
+      fontFamily: 'Fredoka Bold',
+      fontSize: isLandscape ? 30 : 44,
+      height: 1.0,
+      color: const Color(0xFF5C28A0),
+      letterSpacing: 1,
+      shadows: const [
+        Shadow(color: Color(0xFFD0A8F0), offset: Offset(0, 4)),
+        Shadow(
+          color: Color(0x2E5C28A0),
+          offset: Offset(0, 6),
+          blurRadius: 14,
+        ),
+      ],
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Hippo', style: _titleStyle),
+        Text('Hippo', style: titleStyle),
         const SizedBox(height: 0),
-        const Text('Lulu', style: _titleStyle),
+        Text('Lulu', style: titleStyle),
         const SizedBox(height: 4),
         Text(
           tagline,
-          style: const TextStyle(
-            fontFamily: 'Fredoka',
-            fontSize: 14,
-            color: Color(0xFF7854B8),
+          style: TextStyle(
+            fontFamily: 'Fredoka SemiBold',
+            fontSize: isLandscape ? 12 : 14,
+            color: const Color(0xFF7854B8),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -430,14 +434,12 @@ class _TitleStack extends StatelessWidget {
 class _HippoImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // Resmi assets/images/hippo.png olarak ekleyin
-    // Şu an için HippoMascot SVG widget'ı kullanılıyor
-    // return SizedBox(
-    //   width: 190,
-    //   height: 190,
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final size = isLandscape ? 110.0 : 190.0;
+    
     return SizedBox(
-      width: 190,
-      height: 190,
+      width: size,
+      height: size,
       child: Transform.scale(
         scale: 1.35,
         child: Image.asset(
@@ -509,7 +511,7 @@ class _GameModeGrid extends StatelessWidget {
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
           childAspectRatio: 1.1, // Makes the cards wider
-          physics: const BouncingScrollPhysics(),
+          physics: const NeverScrollableScrollPhysics(),
           children: List.generate(modes.length, (i) {
             return _GameModeCard(
               mode: modes[i],
@@ -749,10 +751,13 @@ class _GameModeCardState extends State<_GameModeCard>
 
                                 // Lock / Play badge
                                 if (mode.locked)
-                                  _LockBadge(label: AppLocalizations.of(context)!.locked)
+                                  _LockBadge(
+                                      label:
+                                          AppLocalizations.of(context)!.locked)
                                 else
                                   _PlayBadge(
-                                    label: AppLocalizations.of(context)!.tapToPlay,
+                                    label:
+                                        AppLocalizations.of(context)!.tapToPlay,
                                     textColor: mode.textColor,
                                     controller: _pulseCtrl,
                                   ),
@@ -1030,6 +1035,8 @@ class SceneBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
+      height: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,

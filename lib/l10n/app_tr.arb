@@ -1,6 +1,5 @@
 {
   "@@locale": "tr",
-
   "appTitle": "HippoLulu",
   "tagline": "✨ Öğren · Oyna · Geliş",
   "chooseGame": "🎮 Bir Oyun Seç!",
@@ -9,7 +8,6 @@
   "tapToPlay": "OYNAMAK İÇİN DOKUN!",
   "newRibbon": "YENİ! 🔥",
   "comingSoon": "🚀 Daha fazla oyun yakında!",
-
   "gamePuzzles": "YAPBOZ",
   "gamePuzzlesSub": "Şekilleri eşleştir!",
   "gameMatching": "EŞLEŞTİRME",
@@ -18,26 +16,25 @@
   "gameColoringSub": "Boyama zamanı!",
   "gameCounting": "SAYMA",
   "gameCountingSub": "Sayıları öğren!",
-
   "languageTitle": "Dil Seç",
   "languageDeviceDefault": "Cihaz dili",
   "languageEnglish": "English",
   "languageTurkish": "Türkçe",
   "languageSpanish": "Español",
-
   "back": "Geri",
   "play": "OYNA!",
   "playNow": "HEMEN OYNA!",
   "moreLabel": "+daha",
-
   "chooseTheme": "Bir Tema Seç!",
   "pickYourAdventure": "Macerana başla 🎨",
   "themeAnimals": "Hayvanlar",
   "themeVehicles": "Taşıtlar",
   "themeShapes": "Şekiller",
+  "themeFruits": "Meyveler",
+  "themeVegetables": "Sebzeler",
+  "themefruitsAndVegetables": "Meyve ve Sebzeler",
   "puzzlesCount": "{count} Yapboz",
   "unlockAnimalsHint": "🔓 Daha fazlasını açmak için Hayvanları tamamla!",
-
   "matchingGameTitle": "Eşleştirme Oyunu!",
   "pickCategoryToMatch": "Eşleştirmek için bir kategori seç",
   "howToPlayPart1": "Kartlar ",
@@ -45,11 +42,17 @@
   "howToPlayPart2": " görünür — hatırla ve tüm çiftleri bul!",
   "matchingAnimals": "Hayvanlar",
   "matchingAnimalsDesc": "Sevimli hayvanları eşleştir!",
+  "matchingFruits": "Meyveler",
+  "matchingFruitsDesc": "Tatlı meyveleri eşleştir!",
+  "matchingVegetables": "Sebzeler",
+  "matchingVegetablesDesc": "Sağlıklı sebzeleri eşleştir!",
+  "matchingFruitAndVegetablesDesc": "Tatlı meyve ve sebzeleri eşleştir!",
+  "matchingFoods": "Yemekler",
+  "matchingFoodsDesc": "Lezzetli yemekleri eşleştir!",
   "matchingVehicles": "Taşıtlar",
   "matchingVehiclesDesc": "Taşıtları bul!",
   "matchingObjects": "Nesneler",
   "matchingObjectsDesc": "Eğlenceli nesneleri eşleştir!",
-
   "levelLabel": "Seviye {number}",
   "pairsProgress": "{matched}/{total} çift",
   "rememberCards": "👀 Kartları hatırla!",
@@ -62,7 +65,6 @@
   "beatAllLevels": "🏆 Tüm seviyeleri geçtin!",
   "retry": "🔄 Tekrar",
   "menu": "🏠 Menü",
-
   "pickAnimal": "Bir Hayvan Seç! 🐾",
   "choosePuzzleBuddy": "Yapboz arkadaşını seç",
   "animalLion": "Aslan",
@@ -71,7 +73,6 @@
   "animalTiger": "Kaplan",
   "animalPenguin": "Penguen",
   "animalRabbit": "Tavşan",
-
   "puzzleTitle": "{animal} Yapbozu 🧩",
   "dragPiecesHint": "Parçaları sürükleyerek hayvanı oluştur!",
   "assemblyArea": "BİRLEŞTİRME ALANI",
@@ -79,7 +80,6 @@
   "youDidIt": "Başardın!",
   "puzzleComplete": "{animal} yapbozu tamam! 🌟",
   "playAgain": "Tekrar Oyna! 🔄",
-
   "pieceHead": "Kafa",
   "pieceBody": "Gövde",
   "pieceTail": "Kuyruk",

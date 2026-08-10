@@ -1,6 +1,5 @@
 {
   "@@locale": "es",
-
   "appTitle": "HippoLulu",
   "tagline": "✨ Aprende · Juega · Crece",
   "chooseGame": "🎮 ¡Elige un juego!",
@@ -9,7 +8,6 @@
   "tapToPlay": "¡TOCA PARA JUGAR!",
   "newRibbon": "¡NUEVO! 🔥",
   "comingSoon": "🚀 ¡Más juegos pronto!",
-
   "gamePuzzles": "PUZZLES",
   "gamePuzzlesSub": "¡Combina formas!",
   "gameMatching": "MEMORIA",
@@ -18,26 +16,25 @@
   "gameColoringSub": "¡Pinta y colorea!",
   "gameCounting": "CONTAR",
   "gameCountingSub": "¡Aprende números!",
-
   "languageTitle": "Elegir idioma",
   "languageDeviceDefault": "Idioma del dispositivo",
   "languageEnglish": "English",
   "languageTurkish": "Türkçe",
   "languageSpanish": "Español",
-
   "back": "Atrás",
   "play": "¡JUGAR!",
   "playNow": "¡JUGAR AHORA!",
   "moreLabel": "+más",
-
   "chooseTheme": "¡Elige un tema!",
   "pickYourAdventure": "Elige tu aventura 🎨",
   "themeAnimals": "Animales",
+  "themeFruits": "Frutas",
+  "themeVegetables": "verduras",
+  "themefruitsAndVegetables": "Frutas y verduras",
   "themeVehicles": "Vehículos",
   "themeShapes": "Formas",
   "puzzlesCount": "{count} puzzles",
   "unlockAnimalsHint": "🔓 ¡Completa Animales para desbloquear más!",
-
   "matchingGameTitle": "¡Juego de memoria!",
   "pickCategoryToMatch": "Elige una categoría",
   "howToPlayPart1": "Las cartas se muestran ",
@@ -45,11 +42,17 @@
   "howToPlayPart2": " — ¡memorízalas y encuentra todas las parejas!",
   "matchingAnimals": "Animales",
   "matchingAnimalsDesc": "¡Combina animales!",
+  "matchingFruits": "Frutas",
+  "matchingFruitsDesc": "¡Empareja frutas deliciosas!",
+  "matchingVegetables": "Saludables",
+  "matchingVegetablesDesc": "¡Empareja alimentos saludables!",
+  "matchingFruitAndVegetablesDesc": "¡Combina sabores deliciosos!",
+  "matchingFoods": "Comidas",
+  "matchingFoodsDesc": "¡Empareja comidas deliciosas!",
   "matchingVehicles": "Vehículos",
   "matchingVehiclesDesc": "¡Encuentra los vehículos!",
   "matchingObjects": "Objetos",
   "matchingObjectsDesc": "¡Combina objetos divertidos!",
-
   "levelLabel": "Nivel {number}",
   "pairsProgress": "{matched}/{total} parejas",
   "rememberCards": "👀 ¡Recuerda las cartas!",
@@ -62,7 +65,6 @@
   "beatAllLevels": "🏆 ¡Superaste todos los niveles!",
   "retry": "🔄 Reintentar",
   "menu": "🏠 Menú",
-
   "pickAnimal": "¡Elige un animal! 🐾",
   "choosePuzzleBuddy": "Elige tu compañero de puzzle",
   "animalLion": "León",
@@ -71,7 +73,6 @@
   "animalTiger": "Tigre",
   "animalPenguin": "Pingüino",
   "animalRabbit": "Conejo",
-
   "puzzleTitle": "Puzzle de {animal} 🧩",
   "dragPiecesHint": "¡Arrastra las piezas para armar el animal!",
   "assemblyArea": "ÁREA DE ARMADO",
@@ -79,7 +80,6 @@
   "youDidIt": "¡Lo lograste!",
   "puzzleComplete": "¡Puzzle de {animal} completo! 🌟",
   "playAgain": "¡Jugar de nuevo! 🔄",
-
   "pieceHead": "Cabeza",
   "pieceBody": "Cuerpo",
   "pieceTail": "Cola",

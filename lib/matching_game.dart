@@ -1,40 +1,107 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
 import 'package:hippolulu/l10n/game_l10n.dart';
 
 // ─────────────────────────────────────────────
 //  MATCHING THEME TYPE
 // ─────────────────────────────────────────────
-enum MatchingTheme { animals, vehicles, objects }
+enum MatchingTheme {
+  animals,
+  vehicles,
+  objects,
+  fruitsAndVegetables,
+  fruits,
+  vegetables,
+  foods,
+}
+
+// ── Yanlış eşleşme motivasyon mesajları ──
+const List<Map<String, String>> kWrongMessages = [
+  {'emoji': '🙈', 'text': 'Oops! Try again!'},
+  {'emoji': '🌟', 'text': 'So close! Keep going!'},
+  {'emoji': '💪', 'text': 'You can do it!'},
+  {'emoji': '🤔', 'text': 'Hmm, not quite!'},
+  {'emoji': '😄', 'text': 'Almost! Try again!'},
+];
 
 // ─────────────────────────────────────────────
 //  CONTENT DATA
 // ─────────────────────────────────────────────
 const Map<MatchingTheme, List<String>> kThemeEmojis = {
   MatchingTheme.animals: [
-    'lion.webp',
-    'cat.webp',
-    'giraffe.webp',
-    'bear.webp',
-    'rabbit.webp',
-    'fox.webp',
-    'frog.webp',
-    'parrot.webp',
-    'cow.webp'
+    'animals/bear.webp',
+    'animals/capybara.webp',
+    'animals/cat.webp',
+    'animals/cow.webp',
+    'animals/elephant.webp',
+    'animals/fox.webp',
+    'animals/frog.webp',
+    'animals/giraffe.webp',
+    'animals/lion.webp',
+    'animals/parrot.webp',
+    'animals/rabbit.webp',
+  ],
+  MatchingTheme.fruits: [
+    'fruits/apple.webp',
+    'fruits/avocado.webp',
+    'fruits/banana.webp',
+    'fruits/blueberry.webp',
+    'fruits/cherry.webp',
+    'fruits/grape.webp',
+    'fruits/kiwi.webp',
+    'fruits/orange.webp',
+    'fruits/pineapple.webp',
+    'fruits/strawberry.webp',
+    'fruits/watermelon.webp'
+  ],
+  MatchingTheme.vegetables: [
+    'vegetables/broccoli.webp',
+    'vegetables/carrot.webp',
+    'vegetables/corn.webp',
+    'vegetables/cucumber.webp',
+    'vegetables/eggplant.webp',
+    'vegetables/onion.webp',
+    'vegetables/potato.webp',
+    'vegetables/pumpkin.webp',
+    'vegetables/tomato.webp'
+  ],
+  MatchingTheme.fruitsAndVegetables: [
+    'fruits/apple.webp',
+    'fruits/banana.webp',
+    'fruits/orange.webp',
+    'fruits/strawberry.webp',
+    'fruits/watermelon.webp'
   ],
   MatchingTheme.vehicles: [
-    '🚗',
-    '🚂',
-    '✈️',
-    '🚀',
-    '🚢',
-    '🚁',
-    '🚜',
-    '🏎️',
-    '🚲',
-    '🛵'
+    'vehicles/car.webp',
+    'vehicles/train.webp',
+    'vehicles/airplane.webp',
+    'vehicles/ship.webp',
+    'vehicles/helicopter.webp',
+    'vehicles/bus.webp',
+    'vehicles/bicycle.webp',
+    'vehicles/motorcycle.webp',
+    'vehicles/ambulance.webp',
+    'vehicles/bulldozer.webp',
+    'vehicles/fire_truck.webp',
+    'vehicles/excavator.webp',
+    'vehicles/garbage_truck.webp',
+    'vehicles/police_car.webp',
+    'vehicles/taxi.webp',
+    'vehicles/tractor.webp'
+  ],
+  MatchingTheme.foods: [
+    'foods/bread.webp',
+    'foods/butter.webp',
+    'foods/cheese.webp',
+    'foods/egg.webp',
+    'foods/ice_cream.webp',
+    'foods/milk.webp',
+    'foods/pasta.webp',
+    'foods/pizza.webp',
   ],
   MatchingTheme.objects: [
     '🍎',
@@ -66,7 +133,27 @@ const Map<MatchingTheme, _ThemeColors> kThemeColors = {
       cardShadow: Color(0xFFC05000),
       matched: Color(0xFFA8D85C),
       cardBack: [Color(0xFFFF9940), Color(0xFFFFCE7A)]),
+  MatchingTheme.fruits: _ThemeColors(
+      card: Color(0xFFFFF7E0),
+      cardShadow: Color(0xFFC05000),
+      matched: Color(0xFFA8D85C),
+      cardBack: [Color(0xFFFF9940), Color(0xFFFFCE7A)]),
+  MatchingTheme.vegetables: _ThemeColors(
+      card: Color(0xFFFFF7E0),
+      cardShadow: Color(0xFFC05000),
+      matched: Color(0xFFA8D85C),
+      cardBack: [Color(0xFFFF9940), Color(0xFFFFCE7A)]),
+  MatchingTheme.fruitsAndVegetables: _ThemeColors(
+      card: Color(0xFFFFF7E0),
+      cardShadow: Color(0xFFC05000),
+      matched: Color(0xFFA8D85C),
+      cardBack: [Color(0xFFFF9940), Color(0xFFFFCE7A)]),
   MatchingTheme.vehicles: _ThemeColors(
+      card: Color(0xFFE8F5FF),
+      cardShadow: Color(0xFF1A60B0),
+      matched: Color(0xFFA8D85C),
+      cardBack: [Color(0xFF3A9EE0), Color(0xFF90D0FF)]),
+  MatchingTheme.foods: _ThemeColors(
       card: Color(0xFFE8F5FF),
       cardShadow: Color(0xFF1A60B0),
       matched: Color(0xFFA8D85C),
@@ -151,10 +238,12 @@ class _MatchingGameState extends State<MatchingGame>
   final List<String> _selected = [];
   final Set<String> _matched = {};
   bool _disabled = false;
+  bool _showWrongToast = false;
   int _moves = 0;
   bool _showWin = false;
   Timer? _checkTimer;
   Timer? _countdownTimer;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -166,6 +255,7 @@ class _MatchingGameState extends State<MatchingGame>
   void dispose() {
     _checkTimer?.cancel();
     _countdownTimer?.cancel();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -185,6 +275,7 @@ class _MatchingGameState extends State<MatchingGame>
       _disabled = false;
       _moves = 0;
       _showWin = false;
+      _showWrongToast = false;
     });
     _startCountdown();
   }
@@ -221,6 +312,17 @@ class _MatchingGameState extends State<MatchingGame>
 
       if (a.pairId == b.pairId) {
         setState(() => _matched.add(a.pairId));
+
+        // Dinamik ses çalma
+        final langCode = Localizations.localeOf(context).languageCode;
+        final themeFolder = widget.theme.name;
+        final itemName = a.emoji.split('/').last.split('.').first;
+        final soundPath = 'voices/$themeFolder/$langCode/$itemName.mp3';
+
+        _audioPlayer.play(AssetSource(soundPath)).catchError((e) {
+          debugPrint('Audio file not found: $soundPath');
+        });
+
         if (_matched.length == _level.pairs) {
           Future.delayed(const Duration(milliseconds: 600), () {
             if (mounted) setState(() => _showWin = true);
@@ -231,14 +333,17 @@ class _MatchingGameState extends State<MatchingGame>
             setState(() {
               _selected.clear();
               _disabled = false;
+              _showWrongToast = false;
             });
         });
       } else {
+        setState(() => _showWrongToast = true);
         _checkTimer = Timer(const Duration(milliseconds: 900), () {
           if (mounted)
             setState(() {
               _selected.clear();
               _disabled = false;
+              _showWrongToast = false;
             });
         });
       }
@@ -392,29 +497,39 @@ class _MatchingGameState extends State<MatchingGame>
                         final cardW = bestCardW.floorToDouble();
                         final cardH = (cardW * 1.25).floorToDouble();
 
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: hpad, vertical: vpad),
-                            child: Wrap(
-                              spacing: gap,
-                              runSpacing: gap,
-                              alignment: WrapAlignment.center,
-                              children: _cards
-                                  .map((card) => _MemoryCard(
-                                        card: card,
-                                        faceUp: _isFaceUp(card),
-                                        matched: _matched.contains(card.pairId),
-                                        disabled: _disabled,
-                                        cardW: cardW,
-                                        cardH: cardH,
-                                        themeColors: col,
-                                        onTap: () => _handleCardTap(card.id),
-                                      ))
-                                  .toList(),
+                        return Stack(alignment: Alignment.center, children: [
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: hpad, vertical: vpad),
+                              child: Wrap(
+                                spacing: gap,
+                                runSpacing: gap,
+                                alignment: WrapAlignment.center,
+                                children: _cards
+                                    .map((card) => _MemoryCard(
+                                          card: card,
+                                          faceUp: _isFaceUp(card),
+                                          matched:
+                                              _matched.contains(card.pairId),
+                                          disabled: _disabled,
+                                          cardW: cardW,
+                                          cardH: cardH,
+                                          themeColors: col,
+                                          onTap: () => _handleCardTap(card.id),
+                                        ))
+                                    .toList(),
+                              ),
                             ),
                           ),
-                        );
+                          // ── WRONG TOAST ──
+                          Positioned(
+                            top: constraints.maxHeight * 0.30,
+                            child: IgnorePointer(
+                              child: _WrongToast(show: _showWrongToast),
+                            ),
+                          ),
+                        ]);
                       },
                     ),
                   ),
@@ -704,6 +819,121 @@ class _PlayingHeader extends StatelessWidget {
                     fontWeight: FontWeight.w700)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _WrongToast extends StatefulWidget {
+  final bool show;
+  const _WrongToast({required this.show});
+  @override
+  State<_WrongToast> createState() => _WrongToastState();
+}
+
+class _WrongToastState extends State<_WrongToast>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale, _opacity;
+  late Animation<Offset> _slide;
+  Map<String, String> _msg = kWrongMessages[0];
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 400));
+    _ctrl.addListener(() => setState(() {}));
+    _scale = Tween(begin: 0.4, end: 1.0)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
+    _opacity = Tween(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    _slide = Tween(begin: const Offset(0, 0.15), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void didUpdateWidget(_WrongToast old) {
+    super.didUpdateWidget(old);
+    if (widget.show && !old.show) {
+      // her seferinde rastgele mesaj seç
+      setState(
+          () => _msg = kWrongMessages[Random().nextInt(kWrongMessages.length)]);
+      _ctrl.forward(from: 0);
+    }
+    if (!widget.show && old.show) {
+      _ctrl.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, child) {
+        // animasyon tamamen sıfırlandıysa widget'ı render etme
+        if (_ctrl.value == 0) return const SizedBox.shrink();
+        return Opacity(
+          opacity: _opacity.value,
+          child: SlideTransition(
+            position: _slide,
+            child: ScaleTransition(scale: _scale, child: child),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFF0C0), Color(0xFFFFE08A)],
+          ),
+          borderRadius: BorderRadius.circular(999),
+          border:
+              Border.all(color: Colors.white.withValues(alpha: 0.8), width: 3),
+          boxShadow: const [
+            BoxShadow(color: Color(0xFFD4A000), offset: Offset(0, 6)),
+            BoxShadow(
+                color: Color(0x4DC8A000),
+                offset: Offset(0, 10),
+                blurRadius: 28),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Titreşen emoji
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 500),
+              builder: (_, t, child) {
+                final angle = sin(t * pi * 4) * 15 * (1 - t) * pi / 180;
+                final scale = 1.0 + sin(t * pi) * 0.3;
+                return Transform.scale(
+                  scale: scale,
+                  child: Transform.rotate(angle: angle, child: child),
+                );
+              },
+              child: Text(_msg['emoji']!, style: const TextStyle(fontSize: 30)),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              _msg['text']!,
+              style: const TextStyle(
+                fontFamily: 'Fredoka One',
+                fontSize: 17,
+                color: Color(0xFF7A4800),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1010,9 +1240,7 @@ class _WinOverlayState extends State<_WinOverlay>
                       )),
 
                   const SizedBox(height: 4),
-                  Text(
-                      l10n.matchedAllSummary(
-                          widget.level.pairs, widget.moves),
+                  Text(l10n.matchedAllSummary(widget.level.pairs, widget.moves),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                           fontFamily: 'Fredoka',

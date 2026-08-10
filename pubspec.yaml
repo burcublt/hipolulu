@@ -35,6 +35,7 @@ dependencies:
     sdk: flutter
   intl: any
   shared_preferences: ^2.5.3
+  audioplayers: ^6.0.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -84,15 +85,29 @@ flutter:
   #   - images/a_dot_ham.jpeg
     - assets/images/hippo.png
     - assets/images/splash.png
-    - assets/images/cat.webp
-    - assets/images/lion.webp
-    - assets/images/giraffe.webp
-    - assets/images/bear.webp
-    - assets/images/rabbit.webp
-    - assets/images/fox.webp
-    - assets/images/frog.webp
-    - assets/images/parrot.webp
-    - assets/images/cow.webp
+    - assets/images/animals/
+    - assets/images/fruits/
+    - assets/images/vegetables/
+    - assets/images/foods/
+    - assets/images/vehicles/
+    - assets/images/puzzles/animals/
+    - assets/images/puzzles/fruits/
+    - assets/images/puzzles/vehicles/
+    - assets/voices/animals/tr/
+    - assets/voices/animals/en/
+    - assets/voices/animals/es/
+    - assets/voices/fruits/tr/
+    - assets/voices/fruits/en/
+    - assets/voices/fruits/es/
+    - assets/voices/vegetables/tr/
+    - assets/voices/vegetables/en/
+    - assets/voices/vegetables/es/
+    - assets/voices/vehicles/tr/
+    - assets/voices/vehicles/en/
+    - assets/voices/vehicles/es/
+    - assets/voices/foods/tr/
+    - assets/voices/foods/en/
+    - assets/voices/foods/es/
 
   fonts:
     - family: Fredoka
@@ -101,6 +116,12 @@ flutter:
     - family: Fredoka Bold
       fonts:
         - asset: assets/fonts/Fredoka-Bold.ttf
+    - family: Fredoka Medium
+      fonts:
+        - asset: assets/fonts/Fredoka-Medium.ttf
+    - family: Fredoka SemiBold
+      fonts:
+        - asset: assets/fonts/Fredoka-SemiBold.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
