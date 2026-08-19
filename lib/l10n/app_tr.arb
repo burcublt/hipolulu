@@ -66,7 +66,7 @@
   "retry": "🔄 Tekrar",
   "menu": "🏠 Menü",
   "pickAnimal": "Bir Hayvan Seç! 🐾",
-  "choosePuzzleBuddy": "Yapboz arkadaşını seç",
+  "choosePuzzle": "Yapboz Seç!",
   "animalLion": "Aslan",
   "animalElephant": "Fil",
   "animalGiraffe": "Zürafa",
@@ -85,5 +85,14 @@
   "pieceTail": "Kuyruk",
   "pieceLegs": "Bacaklar",
   "pieceEars": "Kulaklar",
-  "pieceNeck": "Boyun"
+  "pieceNeck": "Boyun",
+  "noPuzzlesFound": "Burada henüz yapboz yok!",
+  "chooseYourPuzzle": "Yapbozunu seç",
+  "rotateDevicePrompt": "Bu oyunu oynamak için\ntelefonunu yan çevir! 🔄",
+  "awesome": "Harika!",
+  "wrongTryAgain": "Hay aksi! Tekrar dene!",
+  "wrongSoClose": "Çok yaklaştın! Devam et!",
+  "wrongYouCanDoIt": "Başarabilirsin!",
+  "wrongNotQuite": "Hmm, pek değil!",
+  "wrongAlmost": "Neredeyse! Tekrar dene!"
 }

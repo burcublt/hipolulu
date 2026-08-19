@@ -85,5 +85,14 @@
   "pieceTail": "Cola",
   "pieceLegs": "Patas",
   "pieceEars": "Orejas",
-  "pieceNeck": "Cuello"
+  "pieceNeck": "Cuello",
+  "noPuzzlesFound": "¡No se encontraron puzzles aquí!",
+  "chooseYourPuzzle": "Elige tu puzzle",
+  "rotateDevicePrompt": "¡Gira tu teléfono de lado para jugar este juego! 🔄",
+  "awesome": "¡Increíble!",
+  "wrongTryAgain": "¡Uy! ¡Inténtalo de nuevo!",
+  "wrongSoClose": "¡Tan cerca! ¡Sigue así!",
+  "wrongYouCanDoIt": "¡Tú puedes!",
+  "wrongNotQuite": "¡Hmm, no del todo!",
+  "wrongAlmost": "¡Casi! ¡Inténtalo de nuevo!"
 }

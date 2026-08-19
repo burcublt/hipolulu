@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
 import 'package:hippolulu/l10n/game_l10n.dart';
+import 'asset_service.dart';
 
 // ─────────────────────────────────────────────
 //  MATCHING THEME TYPE
@@ -19,90 +20,24 @@ enum MatchingTheme {
 }
 
 // ── Yanlış eşleşme motivasyon mesajları ──
-const List<Map<String, String>> kWrongMessages = [
-  {'emoji': '🙈', 'text': 'Oops! Try again!'},
-  {'emoji': '🌟', 'text': 'So close! Keep going!'},
-  {'emoji': '💪', 'text': 'You can do it!'},
-  {'emoji': '🤔', 'text': 'Hmm, not quite!'},
-  {'emoji': '😄', 'text': 'Almost! Try again!'},
+class _WrongMsg {
+  final String emoji;
+  final String Function(AppLocalizations l10n) getText;
+  const _WrongMsg(this.emoji, this.getText);
+}
+
+final List<_WrongMsg> kWrongMessages = [
+  _WrongMsg('🙈', (l10n) => l10n.wrongTryAgain),
+  _WrongMsg('🌟', (l10n) => l10n.wrongSoClose),
+  _WrongMsg('💪', (l10n) => l10n.wrongYouCanDoIt),
+  _WrongMsg('🤔', (l10n) => l10n.wrongNotQuite),
+  _WrongMsg('😄', (l10n) => l10n.wrongAlmost),
 ];
 
 // ─────────────────────────────────────────────
 //  CONTENT DATA
 // ─────────────────────────────────────────────
 const Map<MatchingTheme, List<String>> kThemeEmojis = {
-  MatchingTheme.animals: [
-    'animals/bear.webp',
-    'animals/capybara.webp',
-    'animals/cat.webp',
-    'animals/cow.webp',
-    'animals/elephant.webp',
-    'animals/fox.webp',
-    'animals/frog.webp',
-    'animals/giraffe.webp',
-    'animals/lion.webp',
-    'animals/parrot.webp',
-    'animals/rabbit.webp',
-  ],
-  MatchingTheme.fruits: [
-    'fruits/apple.webp',
-    'fruits/avocado.webp',
-    'fruits/banana.webp',
-    'fruits/blueberry.webp',
-    'fruits/cherry.webp',
-    'fruits/grape.webp',
-    'fruits/kiwi.webp',
-    'fruits/orange.webp',
-    'fruits/pineapple.webp',
-    'fruits/strawberry.webp',
-    'fruits/watermelon.webp'
-  ],
-  MatchingTheme.vegetables: [
-    'vegetables/broccoli.webp',
-    'vegetables/carrot.webp',
-    'vegetables/corn.webp',
-    'vegetables/cucumber.webp',
-    'vegetables/eggplant.webp',
-    'vegetables/onion.webp',
-    'vegetables/potato.webp',
-    'vegetables/pumpkin.webp',
-    'vegetables/tomato.webp'
-  ],
-  MatchingTheme.fruitsAndVegetables: [
-    'fruits/apple.webp',
-    'fruits/banana.webp',
-    'fruits/orange.webp',
-    'fruits/strawberry.webp',
-    'fruits/watermelon.webp'
-  ],
-  MatchingTheme.vehicles: [
-    'vehicles/car.webp',
-    'vehicles/train.webp',
-    'vehicles/airplane.webp',
-    'vehicles/ship.webp',
-    'vehicles/helicopter.webp',
-    'vehicles/bus.webp',
-    'vehicles/bicycle.webp',
-    'vehicles/motorcycle.webp',
-    'vehicles/ambulance.webp',
-    'vehicles/bulldozer.webp',
-    'vehicles/fire_truck.webp',
-    'vehicles/excavator.webp',
-    'vehicles/garbage_truck.webp',
-    'vehicles/police_car.webp',
-    'vehicles/taxi.webp',
-    'vehicles/tractor.webp'
-  ],
-  MatchingTheme.foods: [
-    'foods/bread.webp',
-    'foods/butter.webp',
-    'foods/cheese.webp',
-    'foods/egg.webp',
-    'foods/ice_cream.webp',
-    'foods/milk.webp',
-    'foods/pasta.webp',
-    'foods/pizza.webp',
-  ],
   MatchingTheme.objects: [
     '🍎',
     '⭐',
@@ -199,11 +134,24 @@ enum Phase { preview, playing, won }
 //  HELPERS
 // ─────────────────────────────────────────────
 List<CardState> buildCards(MatchingTheme theme, int pairs) {
-  final pool = kThemeEmojis[theme]!.take(pairs).toList();
+  List<String> pool;
+  if (theme == MatchingTheme.objects) {
+    pool = List.from(kThemeEmojis[MatchingTheme.objects]!);
+  } else {
+    final images = AssetService().getMatchingImages(theme.name);
+    if (images.isNotEmpty) {
+      pool = List.from(images);
+    } else {
+      pool = List.from(kThemeEmojis[theme] ?? []);
+    }
+  }
+
+  pool.shuffle(Random());
+  final selected = pool.take(pairs).toList();
   final cards = <CardState>[];
-  for (int i = 0; i < pool.length; i++) {
-    cards.add(CardState(id: '$i-a', pairId: '$i', emoji: pool[i]));
-    cards.add(CardState(id: '$i-b', pairId: '$i', emoji: pool[i]));
+  for (int i = 0; i < selected.length; i++) {
+    cards.add(CardState(id: '$i-a', pairId: '$i', emoji: selected[i]));
+    cards.add(CardState(id: '$i-b', pairId: '$i', emoji: selected[i]));
   }
   cards.shuffle(Random());
   return cards;
@@ -232,7 +180,7 @@ class MatchingGame extends StatefulWidget {
 class _MatchingGameState extends State<MatchingGame>
     with TickerProviderStateMixin {
   int _levelIdx = 0;
-  late List<CardState> _cards;
+  List<CardState> _cards = [];
   Phase _phase = Phase.preview;
   int _countdown = 0;
   final List<String> _selected = [];
@@ -249,6 +197,17 @@ class _MatchingGameState extends State<MatchingGame>
   void initState() {
     super.initState();
     _startLevel(0);
+    _initGame();
+  }
+
+  void _initGame() async {
+    await AssetService().load();
+    if (mounted) {
+      setState(() {
+        _cards = buildCards(widget.theme,
+            kLevels[_levelIdx.clamp(0, kLevels.length - 1)].pairs);
+      });
+    }
   }
 
   @override
@@ -437,7 +396,7 @@ class _MatchingGameState extends State<MatchingGame>
                               Text(
                                   '· ${l10n.pairsProgress(_matched.length, _level.pairs)}',
                                   style: const TextStyle(
-                                      fontFamily: 'Fredoka',
+                                      fontFamily: 'Fredoka Bold',
                                       fontSize: 13,
                                       color: Color(0xFF9575CD),
                                       fontWeight: FontWeight.w600)),
@@ -597,7 +556,7 @@ class _BackButtonState extends State<_BackButton> {
             const SizedBox(width: 2),
             Text(AppLocalizations.of(context)!.back,
                 style: const TextStyle(
-                    fontFamily: 'Fredoka One',
+                    fontFamily: 'Fredoka Bold',
                     fontSize: 17,
                     color: Color(0xFF5C28A0))),
           ]),
@@ -644,7 +603,7 @@ class _PreviewBanner extends StatelessWidget {
                 children: [
                   Text(l10n.rememberCards,
                       style: const TextStyle(
-                          fontFamily: 'Fredoka One',
+                          fontFamily: 'Fredoka Bold',
                           fontSize: 17,
                           color: Color(0xFF4A2800),
                           height: 1.2)),
@@ -813,7 +772,7 @@ class _PlayingHeader extends StatelessWidget {
             ),
             child: Text('🎯 $movesLabel',
                 style: const TextStyle(
-                    fontFamily: 'Fredoka',
+                    fontFamily: 'Fredoka Bold',
                     fontSize: 13,
                     color: Color(0xFF7854B8),
                     fontWeight: FontWeight.w700)),
@@ -836,7 +795,7 @@ class _WrongToastState extends State<_WrongToast>
   late AnimationController _ctrl;
   late Animation<double> _scale, _opacity;
   late Animation<Offset> _slide;
-  Map<String, String> _msg = kWrongMessages[0];
+  _WrongMsg _msg = kWrongMessages[0];
 
   @override
   void initState() {
@@ -921,13 +880,13 @@ class _WrongToastState extends State<_WrongToast>
                   child: Transform.rotate(angle: angle, child: child),
                 );
               },
-              child: Text(_msg['emoji']!, style: const TextStyle(fontSize: 30)),
+              child: Text(_msg.emoji, style: const TextStyle(fontSize: 30)),
             ),
             const SizedBox(width: 10),
             Text(
-              _msg['text']!,
+              _msg.getText(AppLocalizations.of(context)!),
               style: const TextStyle(
-                fontFamily: 'Fredoka One',
+                fontFamily: 'Fredoka Bold',
                 fontSize: 17,
                 color: Color(0xFF7A4800),
               ),
@@ -1115,9 +1074,18 @@ class _MemoryCardState extends State<_MemoryCard>
         alignment: Alignment.center,
         children: [
           widget.card.emoji.endsWith('.webp') ||
-                  widget.card.emoji.endsWith('.png')
-              ? Image.asset('assets/images/${widget.card.emoji}',
-                  width: emojiSize, height: emojiSize)
+                  widget.card.emoji.endsWith('.png') ||
+                  widget.card.emoji.endsWith('.jpg')
+              ? Image.asset(
+                  widget.card.emoji.startsWith('assets/')
+                      ? widget.card.emoji
+                      : (widget.card.emoji.startsWith('matching/')
+                          ? 'assets/images/${widget.card.emoji}'
+                          : 'assets/images/matching/${widget.card.emoji}'),
+                  width: emojiSize,
+                  height: emojiSize,
+                  fit: BoxFit.contain,
+                )
               : Text(widget.card.emoji, style: TextStyle(fontSize: emojiSize)),
           if (widget.matched)
             Positioned(
@@ -1231,7 +1199,7 @@ class _WinOverlayState extends State<_WinOverlay>
                   Text(l10n.levelDone(levelLabel),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontFamily: 'Fredoka One',
+                        fontFamily: 'Fredoka Bold',
                         fontSize: 42,
                         color: Colors.white,
                         shadows: [
@@ -1243,7 +1211,7 @@ class _WinOverlayState extends State<_WinOverlay>
                   Text(l10n.matchedAllSummary(widget.level.pairs, widget.moves),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                          fontFamily: 'Fredoka',
+                          fontFamily: 'Fredoka Bold',
                           fontSize: 17,
                           color: Colors.white,
                           fontWeight: FontWeight.w600)),
@@ -1288,7 +1256,7 @@ class _WinOverlayState extends State<_WinOverlay>
                       padding: const EdgeInsets.only(bottom: 10),
                       child: Text(l10n.beatAllLevels,
                           style: const TextStyle(
-                              fontFamily: 'Fredoka One',
+                              fontFamily: 'Fredoka Bold',
                               fontSize: 18,
                               color: Colors.white)),
                     ),
@@ -1373,7 +1341,7 @@ class _WinButtonState extends State<_WinButton> {
           child: Text(widget.label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Fredoka One',
+                fontFamily: 'Fredoka Bold',
                 fontSize: widget.primary ? 22 : 16,
                 color: widget.primary ? const Color(0xFF4A2800) : Colors.white,
               )),

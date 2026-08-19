@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:hippolulu/l10n/app_localizations.dart';
+import 'package:hippolulu/l10n/game_l10n.dart';
 
 // ─────────────────────────────────────────────
 //  ANIMAL ID
@@ -199,14 +201,14 @@ class _BackButtonState extends State<_BackButton> {
               ),
             ],
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.chevron_left_rounded,
+              const Icon(Icons.chevron_left_rounded,
                   size: 24, color: Color(0xFF5C28A0)),
-              SizedBox(width: 2),
-              Text('Back',
-                  style: TextStyle(
+              const SizedBox(width: 2),
+              Text(AppLocalizations.of(context)!.back,
+                  style: const TextStyle(
                     fontFamily: 'Fredoka Bold',
                     fontSize: 19,
                     color: Color(0xFF5C28A0),
@@ -227,12 +229,13 @@ class _TitleSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
       children: [
         Text(
-          'Pick an Animal! 🐾',
+          l10n.pickAnimal,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: 'Fredoka Bold',
             fontSize: 34,
             height: 1,
@@ -240,10 +243,10 @@ class _TitleSection extends StatelessWidget {
             shadows: [Shadow(color: Color(0xFFD0A8F0), offset: Offset(0, 4))],
           ),
         ),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Text(
-          'Choose your puzzle buddy',
-          style: TextStyle(
+          l10n.choosePuzzleBuddy,
+          style: const TextStyle(
             fontFamily: 'Fredoka',
             fontSize: 15,
             color: Color(0xFF7854B8),
@@ -453,7 +456,7 @@ class _AnimalCardState extends State<_AnimalCard>
 
                               // Name
                               Text(
-                                a.name,
+                                AppLocalizations.of(context)!.animalName(a.id.name),
                                 style: TextStyle(
                                   fontFamily: 'Fredoka Bold',
                                   fontSize: 18,
@@ -481,14 +484,14 @@ class _AnimalCardState extends State<_AnimalCard>
                                     color: Colors.white.withValues(alpha: 0.5),
                                     borderRadius: BorderRadius.circular(999),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.lock_rounded,
+                                      const Icon(Icons.lock_rounded,
                                           size: 11, color: Color(0xFF7868A8)),
-                                      SizedBox(width: 4),
-                                      Text('Locked',
-                                          style: TextStyle(
+                                      const SizedBox(width: 4),
+                                      Text(AppLocalizations.of(context)!.locked,
+                                          style: const TextStyle(
                                             fontFamily: 'Fredoka',
                                             fontSize: 11,
                                             color: Color(0xFF7868A8),
@@ -560,9 +563,9 @@ class _AnimalCardState extends State<_AnimalCard>
                             ),
                           ],
                         ),
-                        child: const Text(
-                          'PLAY!',
-                          style: TextStyle(
+                        child: Text(
+                          AppLocalizations.of(context)!.play,
+                          style: const TextStyle(
                             fontFamily: 'Fredoka Bold',
                             fontSize: 10,
                             color: Colors.white,

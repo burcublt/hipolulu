@@ -168,7 +168,7 @@ class MatchingThemeSelect extends StatelessWidget {
                           child: RichText(
                             text: TextSpan(
                               style: TextStyle(
-                                fontFamily: 'Fredoka',
+                                fontFamily: 'Fredoka Bold',
                                 fontSize: isLandscape ? 11 : 13,
                                 color: const Color(0xFF5C28A0),
                                 fontWeight: FontWeight.w600,
@@ -269,7 +269,7 @@ class _BackButtonState extends State<_BackButton> {
               const SizedBox(width: 2),
               Text(AppLocalizations.of(context)!.back,
                   style: const TextStyle(
-                      fontFamily: 'Fredoka One',
+                      fontFamily: 'Fredoka Bold',
                       fontSize: 19,
                       color: Color(0xFF5C28A0))),
             ],
@@ -422,8 +422,14 @@ class _ThemeCardState extends State<_ThemeCard> {
                           child: Center(
                               child: t.emoji.endsWith('.webp') ||
                                       t.emoji.endsWith('.png')
-                                  ? Image.asset('assets/images/${t.emoji}',
-                                      width: 42, height: 42)
+                                  ? Image.asset(
+                                      t.emoji.startsWith('assets/')
+                                          ? t.emoji
+                                          : (t.emoji.startsWith('matching/')
+                                              ? 'assets/images/${t.emoji}'
+                                              : 'assets/images/matching/${t.emoji}'),
+                                      width: 42,
+                                      height: 42)
                                   : Text(t.emoji,
                                       style: const TextStyle(fontSize: 36))),
                         ),
@@ -469,8 +475,14 @@ class _ThemeCardState extends State<_ThemeCard> {
                                         ),
                                         child: e.endsWith('.webp') ||
                                                 e.endsWith('.png')
-                                            ? Image.asset('assets/images/$e',
-                                                width: 22, height: 22)
+                                            ? Image.asset(
+                                                e.startsWith('assets/')
+                                                    ? e
+                                                    : (e.startsWith('matching/')
+                                                        ? 'assets/images/$e'
+                                                        : 'assets/images/matching/$e'),
+                                                width: 22,
+                                                height: 22)
                                             : Text(e,
                                                 style: const TextStyle(
                                                     fontSize: 20)),

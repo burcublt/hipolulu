@@ -225,7 +225,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get pickAnimal => 'Bir Hayvan Seç! 🐾';
 
   @override
-  String get choosePuzzleBuddy => 'Yapboz arkadaşını seç';
+  String get choosePuzzleBuddy => 'Choose your puzzle buddy';
 
   @override
   String get animalLion => 'Aslan';
@@ -287,4 +287,32 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get pieceNeck => 'Boyun';
+
+  @override
+  String get noPuzzlesFound => 'Burada henüz yapboz yok!';
+
+  @override
+  String get chooseYourPuzzle => 'Yapbozunu seç';
+
+  @override
+  String get rotateDevicePrompt =>
+      'Bu oyunu oynamak için\ntelefonunu yan çevir! 🔄';
+
+  @override
+  String get awesome => 'Harika!';
+
+  @override
+  String get wrongTryAgain => 'Hay aksi! Tekrar dene!';
+
+  @override
+  String get wrongSoClose => 'Çok yaklaştın! Devam et!';
+
+  @override
+  String get wrongYouCanDoIt => 'Başarabilirsin!';
+
+  @override
+  String get wrongNotQuite => 'Hmm, pek değil!';
+
+  @override
+  String get wrongAlmost => 'Neredeyse! Tekrar dene!';
 }

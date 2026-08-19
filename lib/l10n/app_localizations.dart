@@ -615,6 +615,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Neck'**
   String get pieceNeck;
+
+  /// No description provided for @noPuzzlesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No puzzles found here!'**
+  String get noPuzzlesFound;
+
+  /// No description provided for @chooseYourPuzzle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your puzzle'**
+  String get chooseYourPuzzle;
+
+  /// No description provided for @rotateDevicePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate your phone landscape to play this game! 🔄'**
+  String get rotateDevicePrompt;
+
+  /// No description provided for @awesome.
+  ///
+  /// In en, this message translates to:
+  /// **'Awesome!'**
+  String get awesome;
+
+  /// No description provided for @wrongTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Oops! Try again!'**
+  String get wrongTryAgain;
+
+  /// No description provided for @wrongSoClose.
+  ///
+  /// In en, this message translates to:
+  /// **'So close! Keep going!'**
+  String get wrongSoClose;
+
+  /// No description provided for @wrongYouCanDoIt.
+  ///
+  /// In en, this message translates to:
+  /// **'You can do it!'**
+  String get wrongYouCanDoIt;
+
+  /// No description provided for @wrongNotQuite.
+  ///
+  /// In en, this message translates to:
+  /// **'Hmm, not quite!'**
+  String get wrongNotQuite;
+
+  /// No description provided for @wrongAlmost.
+  ///
+  /// In en, this message translates to:
+  /// **'Almost! Try again!'**
+  String get wrongAlmost;
 }
 
 class _AppLocalizationsDelegate

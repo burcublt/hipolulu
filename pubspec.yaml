@@ -85,11 +85,11 @@ flutter:
   #   - images/a_dot_ham.jpeg
     - assets/images/hippo.png
     - assets/images/splash.png
-    - assets/images/animals/
-    - assets/images/fruits/
-    - assets/images/vegetables/
-    - assets/images/foods/
-    - assets/images/vehicles/
+    - assets/images/matching/animals/
+    - assets/images/matching/fruits/
+    - assets/images/matching/vegetables/
+    - assets/images/matching/foods/
+    - assets/images/matching/vehicles/
     - assets/images/puzzles/animals/
     - assets/images/puzzles/fruits/
     - assets/images/puzzles/vehicles/

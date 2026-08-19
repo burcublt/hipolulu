@@ -286,4 +286,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pieceNeck => 'Neck';
+
+  @override
+  String get noPuzzlesFound => 'No puzzles found here!';
+
+  @override
+  String get chooseYourPuzzle => 'Choose your puzzle';
+
+  @override
+  String get rotateDevicePrompt =>
+      'Rotate your phone landscape to play this game! 🔄';
+
+  @override
+  String get awesome => 'Awesome!';
+
+  @override
+  String get wrongTryAgain => 'Oops! Try again!';
+
+  @override
+  String get wrongSoClose => 'So close! Keep going!';
+
+  @override
+  String get wrongYouCanDoIt => 'You can do it!';
+
+  @override
+  String get wrongNotQuite => 'Hmm, not quite!';
+
+  @override
+  String get wrongAlmost => 'Almost! Try again!';
 }

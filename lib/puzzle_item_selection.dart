@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
+import 'package:hippolulu/l10n/game_l10n.dart';
 import 'main.dart';
 import 'asset_service.dart';
 import 'puzzle_arena.dart';
@@ -77,12 +78,12 @@ class _PuzzleItemSelectionState extends State<PuzzleItemSelection> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
                   child: _imagePaths.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Padding(
-                            padding: EdgeInsets.all(40.0),
+                            padding: const EdgeInsets.all(40.0),
                             child: Text(
-                              'No puzzles found here!',
-                              style: TextStyle(
+                              AppLocalizations.of(context)!.noPuzzlesFound,
+                              style: const TextStyle(
                                 fontFamily: 'Fredoka Bold',
                                 fontSize: 18,
                                 color: Color(0xFF7854B8),
@@ -230,9 +231,9 @@ class _TitleSection extends StatelessWidget {
           ),
         ),
         SizedBox(height: isLandscape ? 2 : 4),
-        const Text(
-          'Choose your puzzle',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)!.chooseYourPuzzle,
+          style: const TextStyle(
             fontFamily: 'Fredoka Bold',
             fontSize: 15,
             color: Color(0xFF7854B8),
@@ -266,21 +267,12 @@ class _PuzzleItemCardState extends State<_PuzzleItemCard> {
   double _scale = 1.0;
   double _pressY = 0;
 
-  String _formatName(String path) {
-    final filename = path.split('/').last.split('.').first;
-    final words = filename.split('_').map((w) {
-      if (w.isEmpty) return '';
-      return w[0].toUpperCase() + w.substring(1).toLowerCase();
-    }).toList();
-    return words.join(' ');
-  }
-
   @override
   Widget build(BuildContext context) {
     const gradient = [Color(0xFF90D0FF), Color(0xFF3A9EE0)];
     const shadow = Color(0xFF1A60B0);
     final border = const Color(0xFF64BEFF).withValues(alpha: 0.6);
-    final name = _formatName(widget.imagePath);
+    final name = AppLocalizations.of(context)!.itemTitle(widget.imagePath);
 
     return GestureDetector(
       onTapDown: (_) => setState(() {

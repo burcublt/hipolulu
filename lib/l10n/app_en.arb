@@ -170,5 +170,14 @@
   "pieceTail": "Tail",
   "pieceLegs": "Legs",
   "pieceEars": "Ears",
-  "pieceNeck": "Neck"
+  "pieceNeck": "Neck",
+  "noPuzzlesFound": "No puzzles found here!",
+  "chooseYourPuzzle": "Choose your puzzle",
+  "rotateDevicePrompt": "Rotate your phone landscape to play this game! 🔄",
+  "awesome": "Awesome!",
+  "wrongTryAgain": "Oops! Try again!",
+  "wrongSoClose": "So close! Keep going!",
+  "wrongYouCanDoIt": "You can do it!",
+  "wrongNotQuite": "Hmm, not quite!",
+  "wrongAlmost": "Almost! Try again!"
 }

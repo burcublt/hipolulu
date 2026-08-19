@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hippolulu/l10n/app_localizations.dart';
+import 'package:hippolulu/l10n/game_l10n.dart';
 
 /// Fraction of the board's width/height reserved for the static image
 /// "frame" around the edges. The jigsaw pieces are cut only from the
@@ -345,13 +347,7 @@ class _PuzzleArenaState extends State<PuzzleArena>
   }
 
   String get _puzzleName {
-    final filename = imageAsset.split('/').last.split('.').first;
-    return filename
-        .split('_')
-        .where((word) => word.isNotEmpty)
-        .map((word) =>
-            '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
-        .join(' ');
+    return AppLocalizations.of(context)!.itemTitle(imageAsset);
   }
 
   @override
@@ -688,10 +684,10 @@ class _RotateDevicePromptState extends State<_RotateDevicePrompt>
                   size: 90, color: Color(0xFF5C28A0)),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Bu oyunu oynamak için\ntelefonunu yan çevir! 🔄',
+            Text(
+              AppLocalizations.of(context)!.rotateDevicePrompt,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                   fontFamily: 'Fredoka',
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -931,12 +927,12 @@ class _WinOverlay extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text('Awesome!',
-                    style: TextStyle(
+                Text(AppLocalizations.of(context)!.awesome,
+                    style: const TextStyle(
                         fontFamily: 'Fredoka One',
                         fontSize: 46,
                         color: Colors.white)),
-                Text('$animalName puzzle complete! 🌟',
+                Text(AppLocalizations.of(context)!.puzzleComplete(animalName),
                     style: const TextStyle(
                         fontFamily: 'Fredoka',
                         fontSize: 20,
@@ -966,8 +962,8 @@ class _WinOverlay extends StatelessWidget {
                     decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(999)),
-                    child: const Text('Play Again! 🔄',
-                        style: TextStyle(
+                    child: Text(AppLocalizations.of(context)!.playAgain,
+                        style: const TextStyle(
                             fontFamily: 'Fredoka One',
                             fontSize: 22,
                             color: Color(0xFF3A7A10))),
