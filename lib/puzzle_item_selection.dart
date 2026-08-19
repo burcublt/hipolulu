@@ -1,6 +1,6 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
+import 'main.dart';
 import 'asset_service.dart';
 import 'puzzle_arena.dart';
 
@@ -29,74 +29,110 @@ class _PuzzleItemSelectionState extends State<PuzzleItemSelection> {
   @override
   void initState() {
     super.initState();
-    _imagePaths = AssetService().getImagesForTheme(widget.themeId);
+    _loadImages();
+  }
+
+  void _loadImages() async {
+    await AssetService().load();
+    final images = AssetService().getImagesForTheme(widget.themeId);
+    if (mounted) {
+      setState(() {
+        _imagePaths = images;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Scaffold(
       body: SceneBackground(
         child: SafeArea(
-          child: Column(
-            children: [
-              // ── TOP BAR ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: _BackButton(onTap: widget.onBack),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── TOP BAR ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _BackButton(onTap: widget.onBack),
+                  ),
                 ),
-              ),
 
-              // ── TITLE ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-                child: _TitleSection(themeTitle: widget.themeTitle),
-              ),
+                // ── TITLE ──
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20, isLandscape ? 8 : 16, 20, 8),
+                  child: _TitleSection(
+                    themeTitle: widget.themeTitle,
+                    isLandscape: isLandscape,
+                  ),
+                ),
 
-              // ── GRID ──
-              Expanded(
-                child: _imagePaths.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No puzzles found here!',
-                          style: TextStyle(
-                            fontFamily: 'Fredoka',
-                            fontSize: 18,
-                            color: Color(0xFF7854B8),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      )
-                    : GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-                        physics: const AlwaysScrollableScrollPhysics(
-                          parent: BouncingScrollPhysics(),
-                        ),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.82,
-                        ),
-                        itemCount: _imagePaths.length,
-                        itemBuilder: (ctx, i) => _PuzzleItemCard(
-                          imagePath: _imagePaths[i],
-                          index: i,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (puzzleCtx) => PuzzleArena(
-                                  imagePath: _imagePaths[i],
-                                  onBack: () => Navigator.of(puzzleCtx).pop(),
-                                ),
+                // ── ITEMS GRID ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
+                  child: _imagePaths.isEmpty
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(40.0),
+                            child: Text(
+                              'No puzzles found here!',
+                              style: TextStyle(
+                                fontFamily: 'Fredoka Bold',
+                                fontSize: 18,
+                                color: Color(0xFF7854B8),
+                                fontWeight: FontWeight.w500,
                               ),
+                            ),
+                          ),
+                        )
+                      : LayoutBuilder(
+                          builder: (context, constraints) {
+                            int crossAxisCount = constraints.maxWidth > 700
+                                ? 4
+                                : (constraints.maxWidth > 480 ? 3 : 2);
+                            double spacing = 14;
+                            double itemWidth = (constraints.maxWidth -
+                                    (spacing * (crossAxisCount - 1))) /
+                                crossAxisCount;
+                            double itemHeight = itemWidth * 1.15;
+
+                            return Wrap(
+                              spacing: spacing,
+                              runSpacing: spacing,
+                              children: List.generate(_imagePaths.length, (i) {
+                                final path = _imagePaths[i];
+                                return SizedBox(
+                                  width: itemWidth,
+                                  height: itemHeight,
+                                  child: _PuzzleItemCard(
+                                    imagePath: path,
+                                    index: i,
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (puzzleCtx) => PuzzleArena(
+                                            imagePath: path,
+                                            onBack: () =>
+                                                Navigator.of(puzzleCtx).pop(),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              }),
                             );
                           },
                         ),
-                      ),
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -168,28 +204,36 @@ class _BackButtonState extends State<_BackButton> {
 // ─────────────────────────────────────────────
 class _TitleSection extends StatelessWidget {
   final String themeTitle;
-  const _TitleSection({required this.themeTitle});
+  final bool isLandscape;
+
+  const _TitleSection({
+    required this.themeTitle,
+    this.isLandscape = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
+        SizedBox(height: isLandscape ? 0 : 4),
         Text(
           themeTitle,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Fredoka Bold',
-            fontSize: 34,
+            fontSize: isLandscape ? 26 : 34,
             height: 1,
-            color: Color(0xFF5C28A0),
-            shadows: [Shadow(color: Color(0xFFD0A8F0), offset: Offset(0, 4))],
+            color: const Color(0xFF5C28A0),
+            shadows: const [
+              Shadow(color: Color(0xFFD0A8F0), offset: Offset(0, 4)),
+            ],
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: isLandscape ? 2 : 4),
         const Text(
           'Choose your puzzle',
           style: TextStyle(
-            fontFamily: 'Fredoka',
+            fontFamily: 'Fredoka Bold',
             fontSize: 15,
             color: Color(0xFF7854B8),
             fontWeight: FontWeight.w500,
@@ -201,7 +245,7 @@ class _TitleSection extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-//  PUZZLE ITEM CARD
+//  PUZZLE ITEM CARD (LARGE PREVIEW DESIGN)
 // ─────────────────────────────────────────────
 class _PuzzleItemCard extends StatefulWidget {
   final String imagePath;
@@ -218,26 +262,9 @@ class _PuzzleItemCard extends StatefulWidget {
   State<_PuzzleItemCard> createState() => _PuzzleItemCardState();
 }
 
-class _PuzzleItemCardState extends State<_PuzzleItemCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ribbonCtrl;
+class _PuzzleItemCardState extends State<_PuzzleItemCard> {
   double _scale = 1.0;
   double _pressY = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _ribbonCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _ribbonCtrl.dispose();
-    super.dispose();
-  }
 
   String _formatName(String path) {
     final filename = path.split('/').last.split('.').first;
@@ -250,15 +277,15 @@ class _PuzzleItemCardState extends State<_PuzzleItemCard>
 
   @override
   Widget build(BuildContext context) {
-    final gradient = const [Color(0xFF90D0FF), Color(0xFF3A9EE0)];
-    final shadow = const Color(0xFF1A60B0);
+    const gradient = [Color(0xFF90D0FF), Color(0xFF3A9EE0)];
+    const shadow = Color(0xFF1A60B0);
     final border = const Color(0xFF64BEFF).withValues(alpha: 0.6);
     final name = _formatName(widget.imagePath);
 
     return GestureDetector(
       onTapDown: (_) => setState(() {
-        _scale = 0.94;
-        _pressY = 3;
+        _scale = 0.95;
+        _pressY = 4;
       }),
       onTapUp: (_) {
         setState(() {
@@ -274,146 +301,103 @@ class _PuzzleItemCardState extends State<_PuzzleItemCard>
       child: AnimatedScale(
         scale: _scale,
         duration: const Duration(milliseconds: 100),
-        child: AnimatedContainer(
+        child: AnimatedSlide(
+          offset: Offset(0, _pressY / 300),
           duration: const Duration(milliseconds: 100),
-          transform: Matrix4.translationValues(0, _pressY, 0),
-          child: Stack(
-            children: [
-              // Main Card
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: gradient,
-                  ),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: border, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: shadow,
-                      offset: const Offset(0, 7),
-                      blurRadius: 0,
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      offset: const Offset(0, 12),
-                      blurRadius: 28,
-                    ),
-                  ],
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: gradient,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: border, width: 3),
+              boxShadow: [
+                const BoxShadow(color: shadow, offset: Offset(0, 7)),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  offset: const Offset(0, 10),
+                  blurRadius: 20,
                 ),
-                child: Column(
-                  children: [
-                    // Illustration Area
-                    Expanded(
-                      flex: 5,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned(
-                            top: 24,
-                            left: 16,
-                            right: 16,
-                            bottom: 0,
-                            child: Hero(
-                              tag: widget.imagePath,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.1),
-                                      offset: const Offset(0, 4),
-                                      blurRadius: 10,
-                                    ),
-                                  ],
-                                  image: DecorationImage(
-                                    image: AssetImage(widget.imagePath),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Large Image Preview Container
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.35),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Hero(
+                          tag: widget.imagePath,
+                          child: Image.asset(
+                            widget.imagePath,
+                            fit: BoxFit.cover,
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                    
-                    // Name Tag
-                    Expanded(
-                      flex: 2,
-                      child: Center(
+                  ),
+                ),
+
+                // Name & Play Icon
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 2, 12, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
                         child: Text(
                           name,
-                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontFamily: 'Fredoka One',
-                            fontSize: 18,
+                            fontSize: 17,
                             color: Colors.white,
                             shadows: [
                               Shadow(
                                 color: Color(0x2E000000),
                                 offset: Offset(0, 2),
-                                blurRadius: 6,
-                              )
+                                blurRadius: 4,
+                              ),
                             ],
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          size: 20,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────
-//  SCENE BACKGROUND (Copied from animal_selection.dart if needed)
-// ─────────────────────────────────────────────
-class SceneBackground extends StatelessWidget {
-  final Widget child;
-  const SceneBackground({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFFF0F4F8),
-      ),
-      child: Stack(
-        children: [
-          // Basic background decor
-          Positioned(
-            top: -100,
-            right: -50,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFD4E6F1).withValues(alpha: 0.5),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -80,
-            left: -80,
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFDEBD0).withValues(alpha: 0.5),
-              ),
-            ),
-          ),
-          child,
-        ],
       ),
     );
   }

@@ -240,51 +240,51 @@ class MainMenu extends StatelessWidget {
             child: Column(
               children: [
                 // ── TOP BAR ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _StarsBadge(starsText: l10n.starsBadge),
-                    const _SettingsButton(),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _StarsBadge(starsText: l10n.starsBadge),
+                      const _SettingsButton(),
+                    ],
+                  ),
                 ),
-              ),
 
-              // ── TITLE + HIPPO ROW ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: _TitleStack(tagline: l10n.tagline),
+                // ── TITLE + HIPPO ROW ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: _TitleStack(tagline: l10n.tagline),
+                        ),
                       ),
-                    ),
-                    _HippoImage(),
-                  ],
+                      _HippoImage(),
+                    ],
+                  ),
                 ),
-              ),
 
-              // ── SECTION LABEL ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                child: _SectionLabel(label: l10n.chooseGame),
-              ),
+                // ── SECTION LABEL ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                  child: _SectionLabel(label: l10n.chooseGame),
+                ),
 
-              // ── GAME MODE GRID ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                child: _GameModeGrid(onModeSelect: onModeSelect),
-              ),
+                // ── GAME MODE GRID ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                  child: _GameModeGrid(onModeSelect: onModeSelect),
+                ),
 
-              // ── FOOTER ──
-              _ComingSoonFooter(text: l10n.comingSoon),
-              const SizedBox(height: 18),
+                // ── FOOTER ──
+                _ComingSoonFooter(text: l10n.comingSoon),
+                const SizedBox(height: 18),
               ],
             ),
           ),
@@ -325,7 +325,7 @@ class _StarsBadge extends StatelessWidget {
           Text(
             starsText,
             style: const TextStyle(
-              fontFamily: 'Fredoka',
+              fontFamily: 'Fredoka Bold',
               fontWeight: FontWeight.w600,
               fontSize: 15,
               color: Color(0xFF6B3FA0),
@@ -391,7 +391,8 @@ class _TitleStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     final titleStyle = TextStyle(
       fontFamily: 'Fredoka Bold',
       fontSize: isLandscape ? 30 : 44,
@@ -434,9 +435,10 @@ class _TitleStack extends StatelessWidget {
 class _HippoImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     final size = isLandscape ? 110.0 : 190.0;
-    
+
     return SizedBox(
       width: size,
       height: size,
@@ -770,15 +772,15 @@ class _GameModeCardState extends State<_GameModeCard>
               ),
 
               //── NEW! RIBBON ──
-              if (!mode.locked)
-                Positioned(
-                  top: -9,
-                  right: -4,
-                  child: _NewRibbon(
-                    label: AppLocalizations.of(context)!.newRibbon,
-                    controller: _ribbonCtrl,
-                  ),
-                ),
+              // if (!mode.locked)
+              //   Positioned(
+              //     top: -9,
+              //     right: -4,
+              //     child: _NewRibbon(
+              //       label: AppLocalizations.of(context)!.newRibbon,
+              //       controller: _ribbonCtrl,
+              //     ),
+              //   ),
             ],
           ),
         ),

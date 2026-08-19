@@ -1,7 +1,25 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/services.dart';
+
+/// Fraction of the board's width/height reserved for the static image
+/// "frame" around the edges. The jigsaw pieces are cut only from the
+/// remaining inner area, so the frame and the pieces never show the same
+/// part of the picture twice. Change this single value to make the frame
+/// thicker or thinner everywhere (board, tray pieces, and placed pieces
+/// all read from it).
+const double kFrameFraction = 0.03;
+
+// Layout constants shared between the widget tree and the manual geometry
+// math used to fly pieces between the board and the tray. Keeping these as
+// named constants (instead of ad-hoc numbers baked into widgets) is what
+// lets us compute a piece's board position and its tray position in the
+// exact same coordinate space.
+const double kTrayMargin = 8;
+const double kTrayHeaderH = 48;
+const double kTrayPad = 8;
+const double kBoardMargin = 8;
+const double kBoardPad = 8;
 
 // ─────────────────────────────────────────────
 //  JIGSAW MODELS & LOGIC
@@ -16,18 +34,62 @@ class JigsawPiece {
       : id = '${row}_$col';
 }
 
-List<JigsawPiece> generate3x3() {
-  return [
-    JigsawPiece(0, 0, EdgeType.flat, EdgeType.tab, EdgeType.blank, EdgeType.flat),
-    JigsawPiece(0, 1, EdgeType.flat, EdgeType.blank, EdgeType.tab, EdgeType.blank),
-    JigsawPiece(0, 2, EdgeType.flat, EdgeType.flat, EdgeType.tab, EdgeType.tab),
-    JigsawPiece(1, 0, EdgeType.tab, EdgeType.tab, EdgeType.tab, EdgeType.flat),
-    JigsawPiece(1, 1, EdgeType.blank, EdgeType.blank, EdgeType.blank, EdgeType.blank),
-    JigsawPiece(1, 2, EdgeType.blank, EdgeType.flat, EdgeType.blank, EdgeType.tab),
-    JigsawPiece(2, 0, EdgeType.blank, EdgeType.blank, EdgeType.flat, EdgeType.flat),
-    JigsawPiece(2, 1, EdgeType.tab, EdgeType.tab, EdgeType.flat, EdgeType.tab),
-    JigsawPiece(2, 2, EdgeType.tab, EdgeType.flat, EdgeType.flat, EdgeType.blank),
-  ];
+/// Rows/cols pair for a given total piece count.
+/// 6  -> 2x3   8  -> 2x4   12 -> 3x4   (fallback: roughly square)
+class _GridSize {
+  final int rows, cols;
+  const _GridSize(this.rows, this.cols);
+}
+
+_GridSize _gridSizeForPieceCount(int count) {
+  switch (count) {
+    case 6:
+      return const _GridSize(2, 3);
+    case 8:
+      return const _GridSize(2, 4);
+    case 12:
+      return const _GridSize(3, 4);
+    default:
+      final cols = sqrt(count).ceil();
+      final rows = (count / cols).ceil();
+      return _GridSize(rows, cols);
+  }
+}
+
+/// Generates a rows x cols jigsaw grid with randomly assigned tab/blank
+/// edges. Shared edges between neighboring pieces are always complementary
+/// (one gets `tab`, the other gets `blank`), and outer-border edges are
+/// always `flat`.
+List<JigsawPiece> generateGrid(int rows, int cols) {
+  final rnd = Random();
+  EdgeType randomEdge() => rnd.nextBool() ? EdgeType.tab : EdgeType.blank;
+  EdgeType opposite(EdgeType e) {
+    switch (e) {
+      case EdgeType.tab:
+        return EdgeType.blank;
+      case EdgeType.blank:
+        return EdgeType.tab;
+      case EdgeType.flat:
+        return EdgeType.flat;
+    }
+  }
+
+  final horizontal = List.generate(
+      rows, (_) => List<EdgeType>.generate(cols - 1, (_) => randomEdge()));
+  final vertical = List.generate(
+      rows - 1, (_) => List<EdgeType>.generate(cols, (_) => randomEdge()));
+
+  final pieces = <JigsawPiece>[];
+  for (int r = 0; r < rows; r++) {
+    for (int c = 0; c < cols; c++) {
+      final top = r == 0 ? EdgeType.flat : opposite(vertical[r - 1][c]);
+      final left = c == 0 ? EdgeType.flat : opposite(horizontal[r][c - 1]);
+      final right = c == cols - 1 ? EdgeType.flat : horizontal[r][c];
+      final bottom = r == rows - 1 ? EdgeType.flat : vertical[r][c];
+      pieces.add(JigsawPiece(r, c, top, right, bottom, left));
+    }
+  }
+  return pieces;
 }
 
 class JigsawClipper extends CustomClipper<Path> {
@@ -38,11 +100,20 @@ class JigsawClipper extends CustomClipper<Path> {
 
   @override
   Path getClip(Size size) {
+    // Push every corner outward by a small margin so this piece's shape
+    // slightly overlaps its neighbors instead of exactly touching them.
+    // Two independently-clipped shapes that only just touch can leave a
+    // hairline, anti-aliased gap at the seam (letting whatever is behind
+    // peek through); a small deliberate overlap guarantees there's never
+    // a gap, and since the overlap shows the same picture/color on both
+    // sides, it's invisible in practice.
+    const double eps = 1.5;
+
     Path p = Path();
-    Offset topLeft = Offset(ox, oy);
-    Offset topRight = Offset(ox + cellW, oy);
-    Offset botRight = Offset(ox + cellW, oy + cellH);
-    Offset botLeft = Offset(ox, oy + cellH);
+    Offset topLeft = Offset(ox - eps, oy - eps);
+    Offset topRight = Offset(ox + cellW + eps, oy - eps);
+    Offset botRight = Offset(ox + cellW + eps, oy + cellH + eps);
+    Offset botLeft = Offset(ox - eps, oy + cellH + eps);
 
     p.moveTo(topLeft.dx, topLeft.dy);
     _drawEdge(p, topLeft, topRight, piece.top);
@@ -73,7 +144,6 @@ class JigsawClipper extends CustomClipper<Path> {
       );
     }
 
-    // tab points to the LEFT of the vector
     double yOut = L * 0.25 * (type == EdgeType.tab ? 1 : -1);
 
     Offset p1 = transform(L * 0.35, 0);
@@ -95,6 +165,20 @@ class JigsawClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
+/// Wraps an already-built Path (e.g. the result of a Path.combine union) so
+/// it can be used directly with a ClipPath widget.
+class _StaticPathClipper extends CustomClipper<Path> {
+  final Path path;
+  const _StaticPathClipper(this.path);
+
+  @override
+  Path getClip(Size size) => path;
+
+  @override
+  bool shouldReclip(covariant _StaticPathClipper oldClipper) =>
+      oldClipper.path != path;
+}
+
 // ─────────────────────────────────────────────
 //  PUZZLE ARENA WIDGET
 // ─────────────────────────────────────────────
@@ -102,14 +186,27 @@ class PuzzleArena extends StatefulWidget {
   final String imagePath;
   final VoidCallback onBack;
 
-  const PuzzleArena({super.key, required this.imagePath, required this.onBack});
+  /// How many pieces the puzzle should have (6 / 8 / 12 map to a matching
+  /// grid via _gridSizeForPieceCount; any other count falls back to a
+  /// roughly-square grid).
+  final int pieceCount;
+
+  const PuzzleArena({
+    super.key,
+    required this.imagePath,
+    required this.onBack,
+    this.pieceCount = 12,
+  });
 
   @override
   State<PuzzleArena> createState() => _PuzzleArenaState();
 }
 
-class _PuzzleArenaState extends State<PuzzleArena> with TickerProviderStateMixin {
-  final List<JigsawPiece> pieces = generate3x3();
+class _PuzzleArenaState extends State<PuzzleArena>
+    with TickerProviderStateMixin {
+  late final int rows;
+  late final int cols;
+  late final List<JigsawPiece> pieces;
   final Set<String> placed = {};
   bool wrongFlash = false;
   bool showWin = false;
@@ -121,27 +218,87 @@ class _PuzzleArenaState extends State<PuzzleArena> with TickerProviderStateMixin
   late AnimationController _celebCtrl;
   final List<AnimationController> _starCtrls = [];
 
+  // ── Intro: "show the solved picture, then scatter the pieces" ──
+  late AnimationController introCtrl;
+  bool introDone = false;
+  late List<Offset>
+      scatterFrac; // 0..1 resting position within the tray's scatter area, per piece index
+  late List<double> scatterRot; // resting tilt (radians), per piece index
+  final GlobalKey _stackKey =
+      GlobalKey(); // outer Stack — used to convert drop offsets to local coords
+
   @override
   void initState() {
     super.initState();
     imageAsset = widget.imagePath;
-    
-    // Shuffle pieces randomly in the tray
-    pieces.shuffle();
 
-    _winCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    _celebCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
+    final grid = _gridSizeForPieceCount(widget.pieceCount);
+    rows = grid.rows;
+    cols = grid.cols;
+    pieces = generateGrid(rows, cols)..shuffle();
+
+    final rnd = Random();
+    scatterFrac = List.generate(
+        pieces.length, (_) => Offset(rnd.nextDouble(), rnd.nextDouble()));
+    scatterRot = List.generate(
+        pieces.length, (_) => (rnd.nextDouble() - 0.5) * 0.5); // ~ -14° .. +14°
+
+    _winCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 500));
+    _celebCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1500))
+      ..repeat(reverse: true);
     for (int i = 0; i < 3; i++) {
-      _starCtrls.add(AnimationController(vsync: this, duration: const Duration(milliseconds: 400)));
+      _starCtrls.add(AnimationController(
+          vsync: this, duration: const Duration(milliseconds: 400)));
     }
+
+    introCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1600));
+    introCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        setState(() => introDone = true);
+      }
+    });
+    _playIntro();
+
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]).catchError((_) {});
+  }
+
+  /// Holds the fully-solved picture on screen for a beat, then lets the
+  /// pieces fly out to the tray.
+  void _playIntro() {
+    introCtrl.value = 0;
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (mounted) introCtrl.forward(from: 0);
+    });
   }
 
   @override
   void dispose() {
     _winCtrl.dispose();
     _celebCtrl.dispose();
-    for (final c in _starCtrls) c.dispose();
+    for (final c in _starCtrls) {
+      c.dispose();
+    }
+    introCtrl.dispose();
+    SystemChrome.setPreferredOrientations(DeviceOrientation.values).catchError((_) {});
     super.dispose();
+  }
+
+  /// Per-piece flight progress (0..1), staggered so pieces peel off one
+  /// after another instead of all moving at once. Piece order already
+  /// comes shuffled (see `pieces` in initState), so index order alone
+  /// gives a natural-looking, non-sequential cascade.
+  double _localProgress(int i) {
+    final n = pieces.length;
+    final start = (i / n) * 0.65;
+    final end = (start + 0.4).clamp(0.0, 1.0);
+    final t = ((introCtrl.value - start) / (end - start)).clamp(0.0, 1.0);
+    return Curves.easeInOut.transform(t);
   }
 
   void _handleDrop(String pieceId, String slotId) {
@@ -173,9 +330,18 @@ class _PuzzleArenaState extends State<PuzzleArena> with TickerProviderStateMixin
       placed.clear();
       showWin = false;
       pieces.shuffle();
+      introDone = false;
+      final rnd = Random();
+      scatterFrac = List.generate(
+          pieces.length, (_) => Offset(rnd.nextDouble(), rnd.nextDouble()));
+      scatterRot =
+          List.generate(pieces.length, (_) => (rnd.nextDouble() - 0.5) * 0.5);
     });
     _winCtrl.reset();
-    for (final c in _starCtrls) c.reset();
+    for (final c in _starCtrls) {
+      c.reset();
+    }
+    _playIntro();
   }
 
   String get _puzzleName {
@@ -183,150 +349,354 @@ class _PuzzleArenaState extends State<PuzzleArena> with TickerProviderStateMixin
     return filename
         .split('_')
         .where((word) => word.isNotEmpty)
-        .map((word) => '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
+        .map((word) =>
+            '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
         .join(' ');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF72D8F5), Color(0xFFB0EAFC), Color(0xFFCAF5E2), Color(0xFFB0E8A8)],
-          ),
+      body: OrientationBuilder(
+        builder: (context, orientation) {
+          if (orientation == Orientation.portrait) {
+            return const _RotateDevicePrompt();
+          }
+          return _buildGame(context);
+        },
+      ),
+    );
+  }
+
+  Widget _buildGame(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF72D8F5),
+            Color(0xFFB0EAFC),
+            Color(0xFFCAF5E2),
+            Color(0xFFB0E8A8)
+          ],
         ),
-        child: Stack(
-          children: [
-            SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  bool isPortrait = constraints.maxHeight > constraints.maxWidth;
-                  
-                  Widget trayContent = Container(
-                    margin: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(color: Colors.white.withOpacity(0.72), width: 2),
-                    ),
-                    child: Column(
+      ),
+      child: Stack(
+        children: [
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final totalW = constraints.maxWidth;
+                final totalH = constraints.maxHeight;
+                final trayW = totalW / 3;
+                final boardAreaW = totalW - trayW;
+
+                // ── Tray geometry (absolute coords, same space as the board) ──
+                final trayOuter =
+                    Rect.fromLTWH(0, 0, trayW, totalH).deflate(kTrayMargin);
+                final scatterArea = Rect.fromLTWH(
+                  trayOuter.left + kTrayPad,
+                  trayOuter.top + kTrayHeaderH + kTrayPad,
+                  trayOuter.width - kTrayPad * 2,
+                  trayOuter.height - kTrayHeaderH - kTrayPad * 2,
+                );
+                final pieceBoxW = scatterArea.width * 0.55;
+                final pieceBoxH = pieceBoxW;
+
+                // ── Board geometry (absolute coords) ──
+                final boardOuter = Rect.fromLTWH(trayW, 0, boardAreaW, totalH)
+                    .deflate(kBoardMargin);
+                final boardPadded = boardOuter.deflate(kBoardPad);
+                final squareSize = min(boardPadded.width, boardPadded.height);
+                final boardRect = Rect.fromCenter(
+                    center: boardPadded.center,
+                    width: squareSize,
+                    height: squareSize);
+
+                final boardW = boardRect.width;
+                final boardH = boardRect.height;
+                final frameW = boardW * kFrameFraction;
+                final frameH = boardH * kFrameFraction;
+                final innerW = boardW - frameW * 2;
+                final innerH = boardH - frameH * 2;
+                final cellW = innerW / cols;
+                final cellH = innerH / rows;
+                final overflowW = cellW * 0.3;
+                final overflowH = cellH * 0.3;
+
+                Rect pieceBoardRect(JigsawPiece p) => Rect.fromLTWH(
+                      boardRect.left + frameW + p.col * cellW - overflowW,
+                      boardRect.top + frameH + p.row * cellH - overflowH,
+                      cellW + overflowW * 2,
+                      cellH + overflowH * 2,
+                    );
+
+                Rect pieceTrayRect(int i) => Rect.fromLTWH(
+                      scatterArea.left +
+                          scatterFrac[i].dx * (scatterArea.width - pieceBoxW),
+                      scatterArea.top +
+                          scatterFrac[i].dy * (scatterArea.height - pieceBoxH),
+                      pieceBoxW,
+                      pieceBoxH,
+                    );
+
+                return AnimatedBuilder(
+                  animation: introCtrl,
+                  builder: (context, _) {
+                    return Stack(
+                      key: _stackKey,
+                      clipBehavior: Clip.none,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.all(12),
+                        // ── static chrome ── no boxed panels: back button and
+                        // counter float directly on the background, and the
+                        // board/tray areas use the full space instead of being
+                        // constrained inside a separate white container.
+                        Positioned(
+                          left: trayOuter.left + 4,
+                          top: trayOuter.top + 4,
+                          width: trayOuter.width - 8,
+                          height: kTrayHeaderH - 4,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               _BackButton(onTap: widget.onBack),
-                              Text('${placed.length} / ${pieces.length}',
-                                  style: const TextStyle(fontFamily: 'Fredoka', fontSize: 18, color: Color(0xFF7854B8), fontWeight: FontWeight.bold)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                    '${placed.length} / ${pieces.length}',
+                                    style: const TextStyle(
+                                        fontFamily: 'Fredoka',
+                                        fontSize: 16,
+                                        color: Color(0xFF7854B8),
+                                        fontWeight: FontWeight.bold)),
+                              ),
                             ],
                           ),
                         ),
-                        Expanded(
-                          child: LayoutBuilder(
-                            builder: (context, trayConstraints) {
-                              return GridView.builder(
-                                padding: const EdgeInsets.all(16),
-                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: isPortrait ? 3 : 2,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                  childAspectRatio: 1.0,
-                                ),
-                                itemCount: pieces.length,
-                                itemBuilder: (ctx, i) {
-                                  final p = pieces[i];
-                                  if (placed.contains(p.id)) return const SizedBox();
-                                  return _TrayPiece(piece: p, imageAsset: imageAsset);
-                                },
-                              );
-                            },
+
+                        // board frame image — always fully visible, pixel-perfect.
+                        // Unsolved cells get covered individually below (per-piece,
+                        // exact jigsaw shape) instead of one big rectangle, so there's
+                        // no seam where a placed piece's edge meets a flat placeholder.
+                        Positioned.fromRect(
+                          rect: boardRect,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.asset(imageAsset, fit: BoxFit.fill),
                           ),
                         ),
-                      ],
-                    ),
-                  );
+                        if (wrongFlash)
+                          Positioned.fromRect(
+                            rect: boardRect,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                  color: const Color(0xFFFF5050)
+                                      .withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(16)),
+                            ),
+                          ),
 
-                  Widget boardContent = Center(
-                    child: Container(
-                      margin: const EdgeInsets.all(16),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.32),
-                        borderRadius: BorderRadius.circular(32),
-                        border: Border.all(color: Colors.white.withOpacity(0.55), width: 2),
-                      ),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: LayoutBuilder(
-                          builder: (ctx, boardConstraints) {
-                            double boardW = boardConstraints.maxWidth;
-                            double boardH = boardConstraints.maxHeight;
-                            double cellW = boardW / 3;
-                            double cellH = boardH / 3;
+                        // ── unified cover for all not-yet-solved pieces ──
+                        // Instead of drawing each unsolved cell's cover as its own
+                        // independent ClipPath (which can leave a hairline gap where
+                        // two adjacent curves don't rasterize in perfect agreement,
+                        // letting the picture underneath peek through), we union all
+                        // of their shapes into ONE path first. Any edge shared between
+                        // two unsolved neighbors becomes an interior edge of that union
+                        // and is never drawn at all — so there is nothing left that can
+                        // show a seam between them.
+                        Builder(builder: (context) {
+                          Path? combinedCover;
+                          for (int i = 0; i < pieces.length; i++) {
+                            final p = pieces[i];
+                            final isPlacedNow = introDone
+                                ? placed.contains(p.id)
+                                : _localProgress(i) <= 0.0;
+                            if (isPlacedNow) continue;
+                            final piecePath = JigsawClipper(
+                                    p,
+                                    cellW,
+                                    cellH,
+                                    frameW + p.col * cellW,
+                                    frameH + p.row * cellH)
+                                .getClip(Size(boardW, boardH));
+                            combinedCover = combinedCover == null
+                                ? piecePath
+                                : Path.combine(PathOperation.union,
+                                    combinedCover, piecePath);
+                          }
+                          if (combinedCover == null)
+                            return const SizedBox.shrink();
+                          return Positioned.fromRect(
+                            rect: boardRect,
+                            child: ClipPath(
+                              clipper: _StaticPathClipper(combinedCover),
+                              child: Container(color: const Color(0xFFE3A868)),
+                            ),
+                          );
+                        }),
 
-                            return Stack(
-                              children: [
-                                Opacity(
-                                  opacity: 0.15,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Image.asset(imageAsset, width: boardW, height: boardH, fit: BoxFit.fill),
-                                  ),
-                                ),
-                                if (wrongFlash)
-                                  Positioned.fill(
-                                    child: Container(
-                                      decoration: BoxDecoration(color: const Color(0xFFFF5050).withOpacity(0.2), borderRadius: BorderRadius.circular(16)),
+                        // ── board slots (drag targets) ──
+                        for (int i = 0; i < pieces.length; i++)
+                          Positioned.fromRect(
+                            rect: pieceBoardRect(pieces[i]),
+                            child: _BoardSlot(
+                              piece: pieces[i],
+                              cellW: cellW,
+                              cellH: cellH,
+                              isPlaced: introDone
+                                  ? placed.contains(pieces[i].id)
+                                  : _localProgress(i) <= 0.0,
+                              onDrop: _handleDrop,
+                            ),
+                          ),
+
+                        // ── flying / resting tray pieces ──
+                        for (int i = 0; i < pieces.length; i++)
+                          if (!(introDone && placed.contains(pieces[i].id)) &&
+                              (introDone || _localProgress(i) > 0.0))
+                            Builder(builder: (context) {
+                              final local = introDone ? 1.0 : _localProgress(i);
+                              final rect = Rect.lerp(pieceBoardRect(pieces[i]),
+                                  pieceTrayRect(i), local)!;
+                              final angle = scatterRot[i] * local;
+                              return Positioned.fromRect(
+                                rect: rect,
+                                child: Transform.rotate(
+                                  angle: angle,
+                                  child: IgnorePointer(
+                                    ignoring: !introDone,
+                                    child: _TrayPiece(
+                                      piece: pieces[i],
+                                      imageAsset: imageAsset,
+                                      rows: rows,
+                                      cols: cols,
+                                      onDragEnd: (details) {
+                                        // Dropped somewhere — if that's inside the tray's
+                                        // scatter area, move this piece's resting spot
+                                        // there. If it's outside (e.g. on the board),
+                                        // the board's own DragTarget already handled it
+                                        // via _handleDrop, so we do nothing extra here.
+                                        final stackBox = _stackKey
+                                            .currentContext
+                                            ?.findRenderObject() as RenderBox?;
+                                        if (stackBox == null) return;
+                                        final localPoint = stackBox
+                                            .globalToLocal(details.offset);
+                                        if (!scatterArea.contains(localPoint))
+                                          return;
+                                        final fx = ((localPoint.dx -
+                                                    scatterArea.left) /
+                                                (scatterArea.width - pieceBoxW))
+                                            .clamp(0.0, 1.0);
+                                        final fy =
+                                            ((localPoint.dy - scatterArea.top) /
+                                                    (scatterArea.height -
+                                                        pieceBoxH))
+                                                .clamp(0.0, 1.0);
+                                        setState(() =>
+                                            scatterFrac[i] = Offset(fx, fy));
+                                      },
                                     ),
                                   ),
-                                for (var p in generate3x3())
-                                  _BoardSlot(
-                                    piece: p,
-                                    cellW: cellW, cellH: cellH,
-                                    boardW: boardW, boardH: boardH,
-                                    isPlaced: placed.contains(p.id),
-                                    imageAsset: imageAsset,
-                                    onDrop: _handleDrop,
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  );
-
-                  if (isPortrait) {
-                    return Column(
-                      children: [
-                        Expanded(flex: 2, child: boardContent),
-                        Expanded(flex: 2, child: trayContent),
+                                ),
+                              );
+                            }),
                       ],
                     );
-                  } else {
-                    return Row(
-                      children: [
-                        Expanded(flex: 1, child: trayContent),
-                        Expanded(flex: 2, child: boardContent),
-                      ],
-                    );
-                  }
-                },
-              ),
+                  },
+                );
+              },
             ),
-            
-            if (showWin)
-              _WinOverlay(
-                animalName: _puzzleName,
-                winCtrl: _winCtrl,
-                celebCtrl: _celebCtrl,
-                starCtrls: _starCtrls,
-                onReset: _handleReset,
-              ),
+          ),
+          if (showWin)
+            _WinOverlay(
+              animalName: _puzzleName,
+              winCtrl: _winCtrl,
+              celebCtrl: _celebCtrl,
+              starCtrls: _starCtrls,
+              onReset: _handleReset,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Plain rounded translucent background panel, reused for both the tray
+/// and the board's outer chrome.
+// ─────────────────────────────────────────────
+//  ROTATE-DEVICE PROMPT (shown while in portrait)
+// ─────────────────────────────────────────────
+class _RotateDevicePrompt extends StatefulWidget {
+  const _RotateDevicePrompt();
+
+  @override
+  State<_RotateDevicePrompt> createState() => _RotateDevicePromptState();
+}
+
+class _RotateDevicePromptState extends State<_RotateDevicePrompt>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1400))
+      ..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF72D8F5),
+            Color(0xFFB0EAFC),
+            Color(0xFFCAF5E2),
+            Color(0xFFB0E8A8)
+          ],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedBuilder(
+              animation: _ctrl,
+              builder: (_, child) {
+                final angle = (-90 * (1 - _ctrl.value)) * pi / 180;
+                return Transform.rotate(angle: angle, child: child);
+              },
+              child: const Icon(Icons.stay_current_portrait_rounded,
+                  size: 90, color: Color(0xFF5C28A0)),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Bu oyunu oynamak için\ntelefonunu yan çevir! 🔄',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontFamily: 'Fredoka',
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5C28A0)),
+            ),
           ],
         ),
       ),
@@ -335,27 +705,42 @@ class _PuzzleArenaState extends State<PuzzleArena> with TickerProviderStateMixin
 }
 
 // ─────────────────────────────────────────────
-//  TRAY PIECE (Draggable)
+//  TRAY PIECE (Draggable) — used both at rest in the tray and, wrapped in
+//  an IgnorePointer + Transform by the parent, as the flying piece during
+//  the intro animation.
 // ─────────────────────────────────────────────
 class _TrayPiece extends StatelessWidget {
   final JigsawPiece piece;
   final String imageAsset;
-  const _TrayPiece({required this.piece, required this.imageAsset});
+  final int rows, cols;
+  final void Function(DraggableDetails)? onDragEnd;
+  const _TrayPiece(
+      {required this.piece,
+      required this.imageAsset,
+      required this.rows,
+      required this.cols,
+      this.onDragEnd});
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // We just render the piece as if board size was 3x this container
         double widgetW = constraints.maxWidth;
         double widgetH = constraints.maxHeight;
-        
-        double cellW = widgetW / 1.6; // Scale down so tabs fit inside the box
+
+        double cellW = widgetW / 1.6;
         double cellH = widgetH / 1.6;
         double overflowW = cellW * 0.3;
         double overflowH = cellH * 0.3;
-        double boardW = cellW * 3;
-        double boardH = cellH * 3;
+
+        // The grid only covers the inner (1 - 2*kFrameFraction) portion of the
+        // full image — render the FULL image at a proportionally larger
+        // virtual size, then shift it by the frame offset, exactly mirroring
+        // what the board does, so tray and board always crop identically.
+        double boardW = cellW * cols / (1 - 2 * kFrameFraction);
+        double boardH = cellH * rows / (1 - 2 * kFrameFraction);
+        double frameW = boardW * kFrameFraction;
+        double frameH = boardH * kFrameFraction;
 
         Widget content = Center(
           child: SizedBox(
@@ -366,17 +751,18 @@ class _TrayPiece extends StatelessWidget {
               child: Stack(
                 children: [
                   Positioned(
-                    left: -(piece.col * cellW) + overflowW,
-                    top: -(piece.row * cellH) + overflowH,
+                    left: -(frameW + piece.col * cellW) + overflowW,
+                    top: -(frameH + piece.row * cellH) + overflowH,
                     width: boardW,
                     height: boardH,
                     child: Image.asset(imageAsset, fit: BoxFit.fill),
                   ),
-                  // Add a subtle border effect via shadow or overlay if desired
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            width: 1.5),
                       ),
                     ),
                   )
@@ -390,9 +776,15 @@ class _TrayPiece extends StatelessWidget {
           data: piece.id,
           feedback: Material(
             color: Colors.transparent,
-            child: Transform.scale(scale: 1.2, child: Opacity(opacity: 0.9, child: SizedBox(width: widgetW, height: widgetH, child: content))),
+            child: Transform.scale(
+                scale: 1.2,
+                child: Opacity(
+                    opacity: 0.9,
+                    child: SizedBox(
+                        width: widgetW, height: widgetH, child: content))),
           ),
           childWhenDragging: Opacity(opacity: 0.3, child: content),
+          onDragEnd: onDragEnd,
           child: content,
         );
       },
@@ -401,19 +793,22 @@ class _TrayPiece extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-//  BOARD SLOT (DragTarget)
+//  BOARD SLOT (DragTarget). No longer self-positions — the parent places
+//  it via Positioned.fromRect so it shares the same coordinate space the
+//  intro-flight math uses.
 // ─────────────────────────────────────────────
 class _BoardSlot extends StatefulWidget {
   final JigsawPiece piece;
-  final double cellW, cellH, boardW, boardH;
+  final double cellW, cellH;
   final bool isPlaced;
-  final String imageAsset;
   final void Function(String, String) onDrop;
 
   const _BoardSlot({
-    required this.piece, required this.cellW, required this.cellH,
-    required this.boardW, required this.boardH,
-    required this.isPlaced, required this.imageAsset, required this.onDrop,
+    required this.piece,
+    required this.cellW,
+    required this.cellH,
+    required this.isPlaced,
+    required this.onDrop,
   });
 
   @override
@@ -427,52 +822,35 @@ class _BoardSlotState extends State<_BoardSlot> {
   Widget build(BuildContext context) {
     double overflowW = widget.cellW * 0.3;
     double overflowH = widget.cellH * 0.3;
-    
-    return Positioned(
-      left: widget.piece.col * widget.cellW - overflowW,
-      top: widget.piece.row * widget.cellH - overflowH,
-      width: widget.cellW + overflowW * 2,
-      height: widget.cellH + overflowH * 2,
-      child: DragTarget<String>(
-        onWillAcceptWithDetails: (_) {
-          if (!widget.isPlaced) setState(() => isOver = true);
-          return !widget.isPlaced;
-        },
-        onLeave: (_) => setState(() => isOver = false),
-        onAcceptWithDetails: (details) {
-          setState(() => isOver = false);
-          widget.onDrop(details.data, widget.piece.id);
-        },
-        builder: (context, candidates, rejected) {
-          if (widget.isPlaced) {
-            return ClipPath(
-              clipper: JigsawClipper(widget.piece, widget.cellW, widget.cellH, overflowW, overflowH),
-              child: Stack(
-                children: [
-                  Positioned(
-                    left: -(widget.piece.col * widget.cellW) + overflowW,
-                    top: -(widget.piece.row * widget.cellH) + overflowH,
-                    width: widget.boardW,
-                    height: widget.boardH,
-                    child: Image.asset(widget.imageAsset, fit: BoxFit.fill),
-                  ),
-                ],
-              ),
-            );
-          }
 
-          // Slot outline
-          return Stack(
-            children: [
-              if (isOver)
-                ClipPath(
-                  clipper: JigsawClipper(widget.piece, widget.cellW, widget.cellH, overflowW, overflowH),
-                  child: Container(color: Colors.white.withOpacity(0.4)),
-                ),
-            ],
-          );
-        },
-      ),
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (_) {
+        if (!widget.isPlaced) setState(() => isOver = true);
+        return !widget.isPlaced;
+      },
+      onLeave: (_) => setState(() => isOver = false),
+      onAcceptWithDetails: (details) {
+        setState(() => isOver = false);
+        widget.onDrop(details.data, widget.piece.id);
+      },
+      builder: (context, candidates, rejected) {
+        if (widget.isPlaced) {
+          // Nothing to draw: the full board image (painted once, underneath
+          // everything) already shows the correct artwork here.
+          return const SizedBox.shrink();
+        }
+
+        // The permanent cover for unsolved cells is drawn once, as a single
+        // unioned shape, by the parent (see the "unified cover" builder in
+        // _buildGame) — that's what avoids the seam. This slot only adds a
+        // transient highlight while a piece is being dragged over it.
+        if (!isOver) return const SizedBox.shrink();
+        return ClipPath(
+          clipper: JigsawClipper(
+              widget.piece, widget.cellW, widget.cellH, overflowW, overflowH),
+          child: Container(color: const Color(0xFFF5C68A)),
+        );
+      },
     );
   }
 }
@@ -491,10 +869,11 @@ class _BackButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.68),
+          color: Colors.white.withValues(alpha: 0.68),
           borderRadius: BorderRadius.circular(999),
         ),
-        child: const Icon(Icons.chevron_left_rounded, size: 28, color: Color(0xFF5C28A0)),
+        child: const Icon(Icons.chevron_left_rounded,
+            size: 28, color: Color(0xFF5C28A0)),
       ),
     );
   }
@@ -510,8 +889,11 @@ class _WinOverlay extends StatelessWidget {
   final VoidCallback onReset;
 
   const _WinOverlay({
-    required this.animalName, required this.winCtrl, required this.celebCtrl,
-    required this.starCtrls, required this.onReset,
+    required this.animalName,
+    required this.winCtrl,
+    required this.celebCtrl,
+    required this.starCtrls,
+    required this.onReset,
   });
 
   @override
@@ -519,7 +901,7 @@ class _WinOverlay extends StatelessWidget {
     return FadeTransition(
       opacity: CurvedAnimation(parent: winCtrl, curve: Curves.easeIn),
       child: Container(
-        color: const Color(0xFF78C850).withOpacity(0.93),
+        color: const Color(0xFF78C850).withValues(alpha: 0.93),
         child: Center(
           child: ScaleTransition(
             scale: CurvedAnimation(parent: winCtrl, curve: Curves.elasticOut),
@@ -549,23 +931,46 @@ class _WinOverlay extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text('Awesome!', style: TextStyle(fontFamily: 'Fredoka One', fontSize: 46, color: Colors.white)),
-                Text('$animalName puzzle complete! 🌟', style: const TextStyle(fontFamily: 'Fredoka', fontSize: 20, color: Colors.white, fontWeight: FontWeight.w600)),
+                const Text('Awesome!',
+                    style: TextStyle(
+                        fontFamily: 'Fredoka One',
+                        fontSize: 46,
+                        color: Colors.white)),
+                Text('$animalName puzzle complete! 🌟',
+                    style: const TextStyle(
+                        fontFamily: 'Fredoka',
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600)),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(3, (i) => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
-                    child: ScaleTransition(scale: CurvedAnimation(parent: starCtrls[i], curve: Curves.elasticOut), child: const Text('⭐', style: TextStyle(fontSize: 40))),
-                  )),
+                  children: List.generate(
+                      3,
+                      (i) => Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            child: ScaleTransition(
+                                scale: CurvedAnimation(
+                                    parent: starCtrls[i],
+                                    curve: Curves.elasticOut),
+                                child: const Text('⭐',
+                                    style: TextStyle(fontSize: 40))),
+                          )),
                 ),
                 const SizedBox(height: 20),
                 GestureDetector(
                   onTap: onReset,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 44, vertical: 16),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)),
-                    child: const Text('Play Again! 🔄', style: TextStyle(fontFamily: 'Fredoka One', fontSize: 22, color: Color(0xFF3A7A10))),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 44, vertical: 16),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(999)),
+                    child: const Text('Play Again! 🔄',
+                        style: TextStyle(
+                            fontFamily: 'Fredoka One',
+                            fontSize: 22,
+                            color: Color(0xFF3A7A10))),
                   ),
                 ),
               ],

@@ -23,15 +23,38 @@ class AssetService {
 
   List<String> getImagesForTheme(String themeId) {
     if (!_isLoaded) return [];
-    // Ensure we match the directory exactly
-    final prefix = 'assets/images/puzzles/$themeId/';
-    return _allAssets.where((path) {
-      final lowerPath = path.toLowerCase();
-      return path.startsWith(prefix) &&
-          (lowerPath.endsWith('.png') ||
-              lowerPath.endsWith('.jpg') ||
-              lowerPath.endsWith('.jpeg') ||
-              lowerPath.endsWith('.webp'));
-    }).toList();
+
+    final normalized = themeId.toLowerCase();
+    List<String> searchPrefixes = [
+      'assets/images/puzzles/$normalized/',
+      'assets/images/$normalized/',
+    ];
+
+    if (normalized.endsWith('s')) {
+      final singular = normalized.substring(0, normalized.length - 1);
+      searchPrefixes.add('assets/images/puzzles/$singular/');
+      searchPrefixes.add('assets/images/$singular/');
+    } else {
+      final plural = '${normalized}s';
+      searchPrefixes.add('assets/images/puzzles/$plural/');
+      searchPrefixes.add('assets/images/$plural/');
+    }
+
+    for (final prefix in searchPrefixes) {
+      final lowerPrefix = prefix.toLowerCase();
+      final matches = _allAssets.where((path) {
+        final lowerPath = path.toLowerCase();
+        return lowerPath.startsWith(lowerPrefix) &&
+            (lowerPath.endsWith('.png') ||
+                lowerPath.endsWith('.jpg') ||
+                lowerPath.endsWith('.jpeg') ||
+                lowerPath.endsWith('.webp'));
+      }).toList();
+      if (matches.isNotEmpty) {
+        return matches;
+      }
+    }
+
+    return [];
   }
 }

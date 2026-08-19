@@ -57,7 +57,7 @@ List<PuzzleTheme> puzzleThemes(AppLocalizations l10n) => [
         gradientColors: const [Color(0xFFD4B8F8), Color(0xFF9E78D8)],
         shadow: const Color(0xFF6840B8),
         border: const Color(0xFFC4A8F0).withValues(alpha: 0.5),
-        locked: true,
+        locked: false,
         stars: 0,
       ),
     ];
@@ -76,55 +76,66 @@ class LevelSelection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final themes = puzzleThemes(l10n);
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Scaffold(
       body: SceneBackground(
         child: SafeArea(
-          child: Column(
-            children: [
-              // ── TOP BAR ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: _BackButton(onTap: onBack),
-                ),
-              ),
-
-              // ── TITLE ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                child: _TitleSection(l10n: l10n),
-              ),
-
-              // ── CARDS ──
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(themes.length, (i) {
-                      final t = themes[i];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 24),
-                        child: _PuzzleThemeCard(
-                          theme: t,
-                          index: i,
-                          playNowLabel: l10n.playNow,
-                          onTap: t.locked ? null : () => onSelect(t),
-                        ),
-                      );
-                    }),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── TOP BAR ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _BackButton(onTap: onBack),
                   ),
                 ),
-              ),
 
-              // ── FOOTER ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-                child: _FooterHint(text: l10n.unlockAnimalsHint),
-              ),
-            ],
+                // ── TITLE ──
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20, isLandscape ? 8 : 16, 20, 8),
+                  child: _TitleSection(l10n: l10n, isLandscape: isLandscape),
+                ),
+
+                // ── THEME CARDS ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      bool isWide = constraints.maxWidth > 500;
+                      return Wrap(
+                        spacing: 14,
+                        runSpacing: 14,
+                        children: themes.map((t) {
+                          return SizedBox(
+                            width: isWide
+                                ? (constraints.maxWidth - 14) / 2
+                                : constraints.maxWidth,
+                            child: _PuzzleThemeCard(
+                              theme: t,
+                              index: themes.indexOf(t),
+                              playNowLabel: l10n.playNow,
+                              onTap: t.locked ? null : () => onSelect(t),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                ),
+
+                // ── FOOTER ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                  child: _FooterHint(text: l10n.unlockAnimalsHint),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -180,7 +191,7 @@ class _BackButtonState extends State<_BackButton> {
               Text(
                 AppLocalizations.of(context)!.back,
                 style: const TextStyle(
-                  fontFamily: 'Fredoka One',
+                  fontFamily: 'Fredoka Bold',
                   fontSize: 19,
                   color: Color(0xFF5C28A0),
                 ),
@@ -198,33 +209,35 @@ class _BackButtonState extends State<_BackButton> {
 // ─────────────────────────────────────────────
 class _TitleSection extends StatelessWidget {
   final AppLocalizations l10n;
+  final bool isLandscape;
 
-  const _TitleSection({required this.l10n});
+  const _TitleSection({required this.l10n, this.isLandscape = false});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
+        SizedBox(height: isLandscape ? 0 : 4),
         Text(
           l10n.chooseTheme,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontFamily: 'Fredoka One',
-            fontSize: 36,
+          style: TextStyle(
+            fontFamily: 'Fredoka Bold',
+            fontSize: isLandscape ? 26 : 34,
             height: 1,
-            color: Color(0xFF5C28A0),
-            shadows: [
+            color: const Color(0xFF5C28A0),
+            shadows: const [
               Shadow(color: Color(0xFFD0B0F0), offset: Offset(0, 4)),
             ],
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: isLandscape ? 2 : 4),
         Text(
           l10n.pickYourAdventure,
-          style: const TextStyle(
-            fontFamily: 'Fredoka',
-            fontSize: 16,
-            color: Color(0xFF7854B8),
+          style: TextStyle(
+            fontFamily: 'Fredoka Bold',
+            fontSize: isLandscape ? 13 : 16,
+            color: const Color(0xFF7854B8),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -268,10 +281,16 @@ class _PuzzleThemeCardState extends State<_PuzzleThemeCard>
     );
     if (!widget.theme.locked) _ribbonCtrl.repeat(reverse: true);
 
-    // Load first image dynamically
+    _loadImage();
+  }
+
+  Future<void> _loadImage() async {
+    await AssetService().load();
     final images = AssetService().getImagesForTheme(widget.theme.id);
-    if (images.isNotEmpty) {
-      _firstImagePath = images.first;
+    if (images.isNotEmpty && mounted) {
+      setState(() {
+        _firstImagePath = images.first;
+      });
     }
   }
 
@@ -387,7 +406,7 @@ class _PuzzleThemeCardState extends State<_PuzzleThemeCard>
                               Text(
                                 theme.label,
                                 style: TextStyle(
-                                  fontFamily: 'Fredoka',
+                                  fontFamily: 'Fredoka Bold',
                                   fontSize: 22,
                                   color: theme.locked
                                       ? const Color(0xFF7870A8)
@@ -408,7 +427,7 @@ class _PuzzleThemeCardState extends State<_PuzzleThemeCard>
                               Text(
                                 theme.sublabel,
                                 style: TextStyle(
-                                  fontFamily: 'Fredoka',
+                                  fontFamily: 'Fredoka Bold',
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                   color: theme.locked
@@ -527,7 +546,7 @@ class _PuzzleThemeCardState extends State<_PuzzleThemeCard>
                       child: Text(
                         widget.playNowLabel,
                         style: const TextStyle(
-                          fontFamily: 'Fredoka One',
+                          fontFamily: 'Fredoka Bold',
                           fontSize: 13,
                           color: Colors.white,
                         ),
@@ -584,7 +603,7 @@ class _FooterHintState extends State<_FooterHint>
         widget.text,
         textAlign: TextAlign.center,
         style: const TextStyle(
-          fontFamily: 'Fredoka',
+          fontFamily: 'Fredoka Bold',
           fontSize: 14,
           color: Color(0xFF7854B8),
           fontWeight: FontWeight.w500,
