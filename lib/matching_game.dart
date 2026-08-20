@@ -389,14 +389,14 @@ class _MatchingGameState extends State<MatchingGame>
                             children: [
                               Text(levelLabel,
                                   style: const TextStyle(
-                                      fontFamily: 'Fredoka Bold',
+                                      fontFamily: 'Baloo2 ExtraBold',
                                       fontSize: 16,
                                       color: Color(0xFF5C28A0))),
                               const SizedBox(width: 6),
                               Text(
                                   '· ${l10n.pairsProgress(_matched.length, _level.pairs)}',
                                   style: const TextStyle(
-                                      fontFamily: 'Fredoka Bold',
+                                      fontFamily: 'Baloo2 ExtraBold',
                                       fontSize: 13,
                                       color: Color(0xFF9575CD),
                                       fontWeight: FontWeight.w600)),
@@ -556,7 +556,8 @@ class _BackButtonState extends State<_BackButton> {
             const SizedBox(width: 2),
             Text(AppLocalizations.of(context)!.back,
                 style: const TextStyle(
-                    fontFamily: 'Fredoka Bold',
+                    fontFamily: 'Baloo2 ExtraBold',
+                    fontWeight: FontWeight.bold,
                     fontSize: 17,
                     color: Color(0xFF5C28A0))),
           ]),
@@ -603,14 +604,14 @@ class _PreviewBanner extends StatelessWidget {
                 children: [
                   Text(l10n.rememberCards,
                       style: const TextStyle(
-                          fontFamily: 'Fredoka Bold',
+                          fontFamily: 'Baloo2 ExtraBold',
                           fontSize: 17,
                           color: Color(0xFF4A2800),
                           height: 1.2)),
                   const SizedBox(height: 3),
                   Text(l10n.flipCountdown(countdown),
                       style: const TextStyle(
-                          fontFamily: 'Fredoka',
+                          fontFamily: 'Baloo2 ExtraBold',
                           fontSize: 13,
                           color: Color(0xFF7A4800),
                           fontWeight: FontWeight.w500)),
@@ -660,7 +661,8 @@ class _CountdownRing extends StatelessWidget {
           ),
           Text('$value',
               style: TextStyle(
-                fontFamily: 'Fredoka Bold',
+                fontFamily: 'Baloo2 ExtraBold',
+                fontWeight: FontWeight.bold,
                 fontSize: 26,
                 color: color,
                 shadows: const [
@@ -772,10 +774,9 @@ class _PlayingHeader extends StatelessWidget {
             ),
             child: Text('🎯 $movesLabel',
                 style: const TextStyle(
-                    fontFamily: 'Fredoka Bold',
+                    fontFamily: 'Baloo2 ExtraBold',
                     fontSize: 13,
-                    color: Color(0xFF7854B8),
-                    fontWeight: FontWeight.w700)),
+                    color: Color(0xFF7854B8))),
           ),
         ],
       ),
@@ -886,7 +887,8 @@ class _WrongToastState extends State<_WrongToast>
             Text(
               _msg.getText(AppLocalizations.of(context)!),
               style: const TextStyle(
-                fontFamily: 'Fredoka Bold',
+                fontFamily: 'Baloo2 ExtraBold',
+                fontWeight: FontWeight.bold,
                 fontSize: 17,
                 color: Color(0xFF7A4800),
               ),
@@ -1199,7 +1201,8 @@ class _WinOverlayState extends State<_WinOverlay>
                   Text(l10n.levelDone(levelLabel),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontFamily: 'Fredoka Bold',
+                        fontFamily: 'Baloo2 ExtraBold',
+                        fontWeight: FontWeight.bold,
                         fontSize: 42,
                         color: Colors.white,
                         shadows: [
@@ -1211,10 +1214,9 @@ class _WinOverlayState extends State<_WinOverlay>
                   Text(l10n.matchedAllSummary(widget.level.pairs, widget.moves),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                          fontFamily: 'Fredoka Bold',
+                          fontFamily: 'Baloo2 ExtraBold',
                           fontSize: 17,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600)),
+                          color: Colors.white)),
 
                   const SizedBox(height: 12),
 
@@ -1256,7 +1258,8 @@ class _WinOverlayState extends State<_WinOverlay>
                       padding: const EdgeInsets.only(bottom: 10),
                       child: Text(l10n.beatAllLevels,
                           style: const TextStyle(
-                              fontFamily: 'Fredoka Bold',
+                              fontFamily: 'Baloo2 ExtraBold',
+                              fontWeight: FontWeight.bold,
                               fontSize: 18,
                               color: Colors.white)),
                     ),
@@ -1341,7 +1344,8 @@ class _WinButtonState extends State<_WinButton> {
           child: Text(widget.label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Fredoka Bold',
+                fontFamily: 'Baloo2 ExtraBold',
+                fontWeight: FontWeight.bold,
                 fontSize: widget.primary ? 22 : 16,
                 color: widget.primary ? const Color(0xFF4A2800) : Colors.white,
               )),

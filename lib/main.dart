@@ -38,7 +38,7 @@ class HippoLuluApp extends StatelessWidget {
           return MaterialApp(
             title: 'HippoLulu',
             theme: ThemeData(
-              fontFamily: 'Fredoka Bold',
+              fontFamily: 'Baloo2 ExtraBold',
             ),
             debugShowCheckedModeBanner: false,
             locale: localeProvider.locale,
@@ -241,7 +241,7 @@ class MainMenu extends StatelessWidget {
               children: [
                 // ── TOP BAR ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -251,40 +251,38 @@ class MainMenu extends StatelessWidget {
                   ),
                 ),
 
-                // ── TITLE + HIPPO ROW ──
+                // ── HERO STACK (Logo + Hippo + Ribbon) ──
+                _HeroStack(
+                  tagline: l10n.tagline,
+                ),
+
+                // ── GAME MODE GRID (in decorative frame) ──
+                // The "Bir Oyun Seç!" pill overlaps the top edge of the
+                // frame, so both live together in one Stack.
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                  padding: const EdgeInsets.fromLTRB(16, 40, 16, 18),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.topCenter,
                     children: [
-                      Flexible(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: _TitleStack(tagline: l10n.tagline),
+                      Padding(
+                        // leaves room at the top for the pill to overlap
+                        padding: const EdgeInsets.only(top: 18),
+                        child: _GameFrame(
+                          child: _GameModeGrid(onModeSelect: onModeSelect),
                         ),
                       ),
-                      _HippoImage(),
+                      Positioned(
+                        top: -10,
+                        child: _SectionPill(label: l10n.chooseGame),
+                      ),
                     ],
                   ),
                 ),
 
-                // ── SECTION LABEL ──
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                  child: _SectionLabel(label: l10n.chooseGame),
-                ),
-
-                // ── GAME MODE GRID ──
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                  child: _GameModeGrid(onModeSelect: onModeSelect),
-                ),
-
                 // ── FOOTER ──
                 _ComingSoonFooter(text: l10n.comingSoon),
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
               ],
             ),
           ),
@@ -307,12 +305,16 @@ class _StarsBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.70),
+        color: Colors.white.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: const Color(0xFFFFD54F),
+          width: 2,
+        ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF643CC8).withValues(alpha: 0.15),
-            blurRadius: 10,
+            blurRadius: 8,
             offset: const Offset(0, 3),
           ),
         ],
@@ -325,10 +327,10 @@ class _StarsBadge extends StatelessWidget {
           Text(
             starsText,
             style: const TextStyle(
-              fontFamily: 'Fredoka Bold',
-              fontWeight: FontWeight.w600,
+              fontFamily: 'Baloo2 ExtraBold',
+              fontWeight: FontWeight.bold,
               fontSize: 15,
-              color: Color(0xFF6B3FA0),
+              color: Color(0xFF5C28A0),
             ),
           ),
         ],
@@ -360,21 +362,25 @@ class _SettingsButtonState extends State<_SettingsButton> {
         scale: _scale,
         duration: const Duration(milliseconds: 100),
         child: Container(
-          width: 48,
-          height: 48,
+          width: 46,
+          height: 46,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.70),
-            borderRadius: BorderRadius.circular(16),
+            color: Colors.white.withValues(alpha: 0.90),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: const Color(0xFFE0D0FF),
+              width: 2,
+            ),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF643CC8).withValues(alpha: 0.15),
-                blurRadius: 10,
+                blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
             ],
           ),
           child: const Icon(Icons.language_rounded,
-              size: 22, color: Color(0xFF7B6AB0)),
+              size: 22, color: Color(0xFF5C28A0)),
         ),
       ),
     );
@@ -382,114 +388,405 @@ class _SettingsButtonState extends State<_SettingsButton> {
 }
 
 // ─────────────────────────────────────────────
-//  TITLE STACK
+//  HERO STACK (logo plaque + hippo + tagline ribbon + choose game pill)
 // ─────────────────────────────────────────────
-class _TitleStack extends StatelessWidget {
+class _HeroStack extends StatelessWidget {
   final String tagline;
 
-  const _TitleStack({required this.tagline});
+  const _HeroStack({
+    required this.tagline,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
-    final titleStyle = TextStyle(
-      fontFamily: 'Fredoka Bold',
-      fontSize: isLandscape ? 30 : 44,
-      height: 1.0,
-      color: const Color(0xFF5C28A0),
-      letterSpacing: 1,
-      shadows: const [
-        Shadow(color: Color(0xFFD0A8F0), offset: Offset(0, 4)),
-        Shadow(
-          color: Color(0x2E5C28A0),
-          offset: Offset(0, 6),
-          blurRadius: 14,
-        ),
-      ],
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Hippo', style: titleStyle),
-        const SizedBox(height: 0),
-        Text('Lulu', style: titleStyle),
-        const SizedBox(height: 4),
-        Text(
-          tagline,
-          style: TextStyle(
-            fontFamily: 'Fredoka SemiBold',
-            fontSize: isLandscape ? 12 : 14,
-            color: const Color(0xFF7854B8),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
-// ─────────────────────────────────────────────
-//  HIPPO IMAGE
-// ─────────────────────────────────────────────
-class _HippoImage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-    final size = isLandscape ? 110.0 : 190.0;
+    final logoWidth = isLandscape ? 300.0 : 400.0;
+    final logoHeight = logoWidth / 1.74;
+    final hippoWidth = isLandscape ? 150.0 : 200.0;
+    final hippoHeight = hippoWidth / 0.945;
+
+    // Shorter now that the "Bir Oyun Seç!" pill has moved down to overlap
+    // the top of the game-mode frame instead of living in this stack.
+    final stackHeight = isLandscape ? 175.0 : 215.0;
 
     return SizedBox(
-      width: size,
-      height: size,
-      child: Transform.scale(
-        scale: 1.35,
-        child: Image.asset(
-          'assets/images/hippo.png',
-          fit: BoxFit.contain,
-        ),
+      width: double.infinity,
+      height: stackHeight,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
+        children: [
+          // 1. Logo Plaque (background of header)
+          Positioned(
+            top: 0,
+            child: SizedBox(
+              width: logoWidth,
+              height: logoHeight,
+              child: Image.asset(
+                'assets/images/logo.webp',
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+
+          // 2. Hippo Mascot (tucked right behind ribbon, body extends down)
+          Positioned(
+            top: isLandscape ? 100 : 125,
+            child: SizedBox(
+              width: hippoWidth,
+              height: hippoHeight,
+              child: Image.asset(
+                'assets/images/hippo.webp',
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+
+          // 3. Tagline Ribbon (overlaps logo bottom and hippo upper chest)
+          // Positioned(
+          //   top: isLandscape ? 130 : 170,
+          //   child: _TaglineRibbon(tagline: tagline),
+          // ),
+        ],
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────
-//  SECTION LABEL
+//  DASHED BORDER PAINTER (reused for plaque + game frame)
 // ─────────────────────────────────────────────
-class _SectionLabel extends StatelessWidget {
-  final String label;
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double radius;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashGap;
+  // Extra gap between the dashed line and the outer edge of the widget
+  // it's painted on. 0 = dashes sit right on the edge. Increase this to
+  // push the dashed strip further inward, away from the frame's edge.
+  final double inset;
 
-  const _SectionLabel({required this.label});
+  _DashedBorderPainter({
+    required this.color,
+    this.radius = 24,
+    this.strokeWidth = 3,
+    this.dashWidth = 7,
+    this.dashGap = 5,
+    this.inset = 0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final totalInset = strokeWidth / 2 + inset;
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(totalInset, totalInset, size.width - totalInset * 2,
+          size.height - totalInset * 2),
+      Radius.circular(radius - inset),
+    );
+    final path = Path()..addRRect(rrect);
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    for (final metric in path.computeMetrics()) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final next = (distance + dashWidth).clamp(0.0, metric.length);
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance = next + dashGap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.inset != inset;
+}
+
+// ─────────────────────────────────────────────
+//  TAGLINE RIBBON (real ribbon.png asset + text overlay)
+// ─────────────────────────────────────────────
+class _TaglineRibbon extends StatelessWidget {
+  final String tagline;
+
+  const _TaglineRibbon({required this.tagline});
 
   @override
   Widget build(BuildContext context) {
-    final divider = Expanded(
-      child: Container(
-        height: 2,
-        decoration: BoxDecoration(
-          color: const Color(0xFF5C28A0).withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(999),
-        ),
+    const width = 210.0;
+    const height = width / 3.79;
+
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Image.asset(
+            'assets/images/ribbon.png',
+            fit: BoxFit.fill,
+          ),
+          CustomPaint(
+            size: const Size(width, height),
+            painter: _CurvedTextPainter(
+              text: tagline,
+              textStyle: const TextStyle(
+                fontFamily: 'Baloo2 ExtraBold',
+                fontSize: 13.5,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.1,
+                shadows: [
+                  Shadow(
+                    color: Color(0x88000000),
+                    offset: Offset(0, 1),
+                    blurRadius: 2,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+}
 
-    return Row(
-      children: [
-        divider,
-        const SizedBox(width: 8),
-        Text(
+class _CurvedTextPainter extends CustomPainter {
+  final String text;
+  final TextStyle textStyle;
+
+  _CurvedTextPainter({
+    required this.text,
+    required this.textStyle,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cleanText = text.replaceAll(RegExp(r'^[✨⭐\s]+'), '').trim();
+    if (cleanText.isEmpty) return;
+
+    const startX = 22.0;
+    final endX = size.width - 22.0;
+    final startY = size.height * 0.58;
+    final endY = size.height * 0.58;
+    final controlX = size.width / 2;
+    final controlY = size.height * 0.28;
+
+    final path = Path()
+      ..moveTo(startX, startY)
+      ..quadraticBezierTo(controlX, controlY, endX, endY);
+
+    final metrics = path.computeMetrics().toList();
+    if (metrics.isEmpty) return;
+    final metric = metrics.first;
+    final pathLength = metric.length;
+
+    final refPainter = TextPainter(
+      text: TextSpan(text: 'X', style: textStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final baseHeight = refPainter.height;
+
+    final graphemes = cleanText.characters.toList();
+
+    final charPainters = <TextPainter>[];
+    double totalWidth = 0;
+    for (final charStr in graphemes) {
+      final tp = TextPainter(
+        text: TextSpan(text: charStr, style: textStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      charPainters.add(tp);
+      totalWidth += tp.width;
+    }
+
+    if (totalWidth == 0) return;
+
+    double currentOffset = (pathLength - totalWidth) / 2;
+
+    for (int i = 0; i < graphemes.length; i++) {
+      final tp = charPainters[i];
+      final charWidth = tp.width;
+
+      if (charWidth == 0) {
+        currentOffset += charWidth;
+        continue;
+      }
+
+      final charCenterOffset =
+          (currentOffset + charWidth / 2).clamp(0.0, pathLength);
+      final tangent = metric.getTangentForOffset(charCenterOffset);
+
+      if (tangent != null) {
+        canvas.save();
+        canvas.translate(tangent.position.dx, tangent.position.dy);
+        canvas.rotate(tangent.angle);
+        tp.paint(canvas, Offset(-charWidth / 2, -baseHeight * 0.50));
+        canvas.restore();
+      }
+
+      currentOffset += charWidth;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CurvedTextPainter oldDelegate) {
+    return oldDelegate.text != text || oldDelegate.textStyle != textStyle;
+  }
+}
+
+// ─────────────────────────────────────────────
+//  SECTION PILL ("🎮 Bir Oyun Seç!")
+// ─────────────────────────────────────────────
+class _SectionPill extends StatelessWidget {
+  final String label;
+
+  const _SectionPill({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    // The CustomPaint now wraps the whole decorated Container (background +
+    // padding + text), so it sizes itself to the full pill instead of just
+    // the text — the dashed border is painted right on the pill's true
+    // outer edge instead of hugging tightly around the label.
+    return CustomPaint(
+      foregroundPainter: _DashedBorderPainter(
+        color: const Color(0xFFFFC94D),
+        radius: 999,
+        strokeWidth: 2,
+        dashWidth: 6,
+        dashGap: 4,
+        inset: 4, // 👈 kesikli şerit ile pill'in kenarı arasındaki boşluk (px)
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 255, 237, 194),
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF643CC8).withValues(alpha: 0.15),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Text(
           label,
           style: const TextStyle(
-            fontFamily: 'Fredoka Bold',
-            fontSize: 17,
+            fontFamily: 'Baloo2 ExtraBold',
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
             color: Color(0xFF5C28A0),
           ),
         ),
-        const SizedBox(width: 8),
-        divider,
-      ],
+      ),
     );
   }
+}
+
+// ─────────────────────────────────────────────
+//  GAME FRAME (dashed, light-bulb bordered panel around the grid)
+// ─────────────────────────────────────────────
+class _GameFrame extends StatelessWidget {
+  final Widget child;
+
+  const _GameFrame({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      // The red border + light-bulb ring is painted at the true outer
+      // edge of this widget now, so there's no cream margin outside it
+      // and the bulbs sit right on the visible edge (like the reference).
+      child: CustomPaint(
+        foregroundPainter: _LightBulbBorderPainter(),
+        child: Container(
+          // Matches the strokeW (9) in _LightBulbBorderPainter exactly,
+          // so the warm fill butts right up against the red band with
+          // no transparent gap showing through in between.
+          margin: const EdgeInsets.all(9),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            // Warmer amusement-park cream/tan instead of near-white.
+            color: const Color.fromARGB(255, 247, 199, 169),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _LightBulbBorderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const strokeW = 9.0;
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(strokeW / 2, strokeW / 2, size.width - strokeW,
+          size.height - strokeW),
+      const Radius.circular(22),
+    );
+
+    // Thick red arcade frame border
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..color = const Color.fromARGB(255, 240, 96, 94)
+        ..strokeWidth = strokeW
+        ..style = PaintingStyle.stroke,
+    );
+
+    // Yellow glowing bulbs around the frame
+    final path = Path()..addRRect(rrect);
+    for (final metric in path.computeMetrics()) {
+      const spacing = 15.0;
+      double distance = spacing / 2;
+      while (distance < metric.length) {
+        final tangent = metric.getTangentForOffset(distance);
+        if (tangent != null) {
+          canvas.drawCircle(
+            tangent.position,
+            4.5,
+            Paint()..color = const Color(0xFFFFEB3B),
+          );
+          canvas.drawCircle(
+            tangent.position,
+            3.0,
+            Paint()..color = const Color(0xFFFFFDE7),
+          );
+          canvas.drawCircle(
+            tangent.position,
+            4.5,
+            Paint()
+              ..color = const Color(0xFFFF9800)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 0.8,
+          );
+        }
+        distance += spacing;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LightBulbBorderPainter oldDelegate) => false;
 }
 
 // ─────────────────────────────────────────────
@@ -506,22 +803,23 @@ class _GameModeGrid extends StatelessWidget {
     int crossAxisCount = screenWidth > 800 ? 4 : (screenWidth > 500 ? 3 : 2);
 
     return Align(
-        alignment: Alignment.topCenter,
-        child: GridView.count(
-          shrinkWrap: true,
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.1, // Makes the cards wider
-          physics: const NeverScrollableScrollPhysics(),
-          children: List.generate(modes.length, (i) {
-            return _GameModeCard(
-              mode: modes[i],
-              index: i,
-              onTap: modes[i].locked ? null : () => onModeSelect(modes[i].id),
-            );
-          }),
-        ));
+      alignment: Alignment.topCenter,
+      child: GridView.count(
+        shrinkWrap: true,
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.15,
+        physics: const NeverScrollableScrollPhysics(),
+        children: List.generate(modes.length, (i) {
+          return _GameModeCard(
+            mode: modes[i],
+            index: i,
+            onTap: modes[i].locked ? null : () => onModeSelect(modes[i].id),
+          );
+        }),
+      ),
+    );
   }
 }
 
@@ -557,7 +855,6 @@ class _GameModeCardState extends State<_GameModeCard>
   void initState() {
     super.initState();
 
-    // Emoji wiggle
     _emojiCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -574,30 +871,15 @@ class _GameModeCardState extends State<_GameModeCard>
       );
     }
 
-    // TAP TO PLAY pulse
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     );
-    if (!widget.mode.locked) {
-      Timer(const Duration(milliseconds: 600), () {
-        if (mounted) {
-          _pulseCtrl.repeat(
-            period: const Duration(milliseconds: 1400 + 1000),
-            reverse: true,
-          );
-        }
-      });
-    }
 
-    // NEW ribbon wobble
     _ribbonCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     );
-    if (!widget.mode.locked) {
-      _ribbonCtrl.repeat(reverse: true);
-    }
 
     _pressCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 100));
@@ -615,15 +897,15 @@ class _GameModeCardState extends State<_GameModeCard>
   @override
   Widget build(BuildContext context) {
     final mode = widget.mode;
-    final cardBg = mode.locked ? const Color(0xFFD4CEF0) : mode.bg;
-    final cardShadow = mode.locked ? const Color(0xFFA8A0CC) : mode.shadow;
+    final cardBg = mode.bg;
+    final cardShadow = mode.shadow;
 
     return GestureDetector(
       onTapDown: (_) {
         if (!mode.locked) {
           setState(() {
-            _pressScale = mode.locked ? 0.96 : 0.91;
-            _pressY = mode.locked ? 0 : 5;
+            _pressScale = 0.93;
+            _pressY = 4;
           });
         }
       },
@@ -644,144 +926,108 @@ class _GameModeCardState extends State<_GameModeCard>
         child: AnimatedSlide(
           offset: Offset(0, _pressY / 200),
           duration: const Duration(milliseconds: 100),
-          child: Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              // ── CARD BODY ──
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: mode.locked
-                        ? Colors.white.withValues(alpha: 0.5)
-                        : Colors.white.withValues(alpha: 0.65),
-                    width: 3.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: cardShadow,
-                      offset: const Offset(0, 7),
-                      blurRadius: 0,
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.16),
-                      offset: const Offset(0, 12),
-                      blurRadius: 24,
-                    ),
-                  ],
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.65),
+                width: 3,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: cardShadow,
+                  offset: const Offset(0, 6),
+                  blurRadius: 0,
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Glare
-                      if (!mode.locked)
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: Container(
-                            height: 60,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.white.withValues(alpha: 0.45),
-                                  Colors.white.withValues(alpha: 0),
-                                ],
-                              ),
-                            ),
-                          ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  offset: const Offset(0, 8),
+                  blurRadius: 16,
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(21),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Glare
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.40),
+                            Colors.white.withValues(alpha: 0),
+                          ],
                         ),
+                      ),
+                    ),
+                  ),
 
-                      // Content
-                      Padding(
-                          padding: const EdgeInsets.fromLTRB(10, 18, 10, 16),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Emoji circle
-                                _EmojiCircle(
-                                  emoji: mode.emoji,
-                                  locked: mode.locked,
-                                  controller: _emojiCtrl,
+                  // Content
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _EmojiCircle(
+                            emoji: mode.emoji,
+                            locked: mode.locked,
+                            controller: _emojiCtrl,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            mode.label,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Baloo2 ExtraBold',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: mode.textColor,
+                              letterSpacing: 0.4,
+                              shadows: const [
+                                Shadow(
+                                  color: Colors.black12,
+                                  offset: Offset(0, 1),
                                 ),
-                                const SizedBox(height: 5),
-
-                                // Label
-                                Text(
-                                  mode.label,
-                                  style: TextStyle(
-                                    fontFamily: 'Fredoka Bold',
-                                    fontSize: 17,
-                                    color: mode.locked
-                                        ? const Color(0xFF8878B8)
-                                        : mode.textColor,
-                                    letterSpacing: 0.5,
-                                    shadows: mode.locked
-                                        ? null
-                                        : [
-                                            const Shadow(
-                                              color: Colors.white54,
-                                              offset: Offset(0, 2),
-                                            ),
-                                          ],
-                                  ),
-                                ),
-
-                                // Sublabel
-                                Text(
-                                  mode.sublabel,
-                                  style: TextStyle(
-                                    fontFamily: 'Fredoka',
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: mode.locked
-                                        ? const Color(0xFFA898C8)
-                                        : mode.textColor
-                                            .withValues(alpha: 0.73),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-
-                                // Lock / Play badge
-                                if (mode.locked)
-                                  _LockBadge(
-                                      label:
-                                          AppLocalizations.of(context)!.locked)
-                                else
-                                  _PlayBadge(
-                                    label:
-                                        AppLocalizations.of(context)!.tapToPlay,
-                                    textColor: mode.textColor,
-                                    controller: _pulseCtrl,
-                                  ),
                               ],
                             ),
-                          )),
-                    ],
+                          ),
+                          Text(
+                            mode.sublabel,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Baloo2 ExtraBold',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: mode.textColor.withValues(alpha: 0.85),
+                            ),
+                          ),
+                          if (mode.locked) ...[
+                            const SizedBox(height: 6),
+                            _LockBadge(
+                              label: AppLocalizations.of(context)!.locked,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-
-              //── NEW! RIBBON ──
-              // if (!mode.locked)
-              //   Positioned(
-              //     top: -9,
-              //     right: -4,
-              //     child: _NewRibbon(
-              //       label: AppLocalizations.of(context)!.newRibbon,
-              //       controller: _ribbonCtrl,
-              //     ),
-              //   ),
-            ],
+            ),
           ),
         ),
       ),
@@ -863,21 +1109,28 @@ class _LockBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.55),
+        color: Colors.white.withValues(alpha: 0.90),
         borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.10),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.lock_rounded, size: 11, color: Color(0xFF7868A8)),
+          const Icon(Icons.lock_rounded, size: 12, color: Color(0xFF5C28A0)),
           const SizedBox(width: 4),
           Text(
             label,
             style: const TextStyle(
-              fontFamily: 'Fredoka',
+              fontFamily: 'Baloo2 ExtraBold',
+              fontWeight: FontWeight.bold,
               fontSize: 11,
-              color: Color(0xFF7868A8),
-              fontWeight: FontWeight.w600,
+              color: Color(0xFF5C28A0),
             ),
           ),
         ],
@@ -914,7 +1167,7 @@ class _PlayBadge extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontFamily: 'Fredoka',
+            fontFamily: 'Baloo2 ExtraBold',
             fontSize: 12,
             color: textColor,
           ),
@@ -964,7 +1217,8 @@ class _NewRibbon extends StatelessWidget {
         child: Text(
           label,
           style: const TextStyle(
-            fontFamily: 'Fredoka',
+            fontFamily: 'Baloo2 ExtraBold',
+            fontWeight: FontWeight.bold,
             fontSize: 11,
             color: Colors.white,
           ),
@@ -1010,17 +1264,31 @@ class _ComingSoonFooterState extends State<_ComingSoonFooter>
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (_, child) => Opacity(
-        opacity: 0.5 + 0.5 * _ctrl.value,
+        opacity: 0.6 + 0.4 * _ctrl.value,
         child: child,
       ),
-      child: Text(
-        widget.text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontFamily: 'Fredoka',
-          fontSize: 13,
-          color: Color(0xFF7854B8),
-          fontWeight: FontWeight.w500,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF7C3AED),
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Text(
+          '🚀  ${widget.text}',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontFamily: 'Baloo2 ExtraBold',
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            color: Colors.white,
+          ),
         ),
       ),
     );
@@ -1036,42 +1304,16 @@ class SceneBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          stops: [0.0, 0.3, 0.55, 0.78, 1.0],
-          colors: [
-            Color(0xFF72D8F5),
-            Color(0xFF9EE8F8),
-            Color(0xFFB8F0FA),
-            Color(0xFFCAF5E8),
-            Color(0xFFB0E8A8),
-          ],
-        ),
-      ),
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.60,
-              child: CustomPaint(painter: _SkyPainter()),
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.28,
-              child: CustomPaint(painter: _HillsPainter()),
-            ),
+          // Circus / ferris-wheel park background image
+          Image.asset(
+            'assets/images/background.png',
+            fit: BoxFit.cover,
           ),
           child,
         ],

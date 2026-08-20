@@ -168,10 +168,9 @@ class MatchingThemeSelect extends StatelessWidget {
                           child: RichText(
                             text: TextSpan(
                               style: TextStyle(
-                                fontFamily: 'Fredoka Bold',
+                                fontFamily: 'Baloo2 ExtraBold',
                                 fontSize: isLandscape ? 11 : 13,
                                 color: const Color(0xFF5C28A0),
-                                fontWeight: FontWeight.w600,
                                 height: 1.4,
                               ),
                               children: [
@@ -269,7 +268,8 @@ class _BackButtonState extends State<_BackButton> {
               const SizedBox(width: 2),
               Text(AppLocalizations.of(context)!.back,
                   style: const TextStyle(
-                      fontFamily: 'Fredoka Bold',
+                      fontFamily: 'Baloo2 ExtraBold',
+                      fontWeight: FontWeight.bold,
                       fontSize: 19,
                       color: Color(0xFF5C28A0))),
             ],
@@ -294,20 +294,24 @@ class _TitleSection extends StatelessWidget {
     return Column(
       children: [
         SizedBox(height: isLandscape ? 0 : 6),
-        Text(l10n.matchingGameTitle,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Fredoka Bold',
-              fontSize: isLandscape ? 26 : 34,
-              color: const Color(0xFF5C28A0),
-              shadows: const [
-                Shadow(color: Color(0xFFD0A8F0), offset: Offset(0, 4))
-              ],
-            )),
-        SizedBox(height: isLandscape ? 0 : 4),
+        Text(
+          l10n.matchingGameTitle,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: 'Baloo2 ExtraBold',
+            fontWeight: FontWeight.bold,
+            fontSize: isLandscape ? 26 : 34,
+            height: 1,
+            color: const Color(0xFF5C28A0),
+            shadows: const [
+              Shadow(color: Color(0xFFD0B0F0), offset: Offset(0, 4)),
+            ],
+          ),
+        ),
+        SizedBox(height: isLandscape ? 2 : 4),
         Text(l10n.pickCategoryToMatch,
             style: TextStyle(
-              fontFamily: 'Fredoka',
+              fontFamily: 'Baloo2 ExtraBold',
               fontSize: isLandscape ? 13 : 15,
               color: const Color(0xFF7854B8),
               fontWeight: FontWeight.w500,
@@ -441,8 +445,9 @@ class _ThemeCardState extends State<_ThemeCard> {
                             children: [
                               Text(t.label,
                                   style: const TextStyle(
-                                    fontFamily: 'Fredoka Bold',
-                                    fontSize: 24,
+                                    fontFamily: 'Baloo2 ExtraBold',
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 22,
                                     color: Colors.white,
                                     shadows: [
                                       Shadow(
@@ -454,7 +459,7 @@ class _ThemeCardState extends State<_ThemeCard> {
                               const SizedBox(height: 3),
                               Text(t.desc,
                                   style: TextStyle(
-                                    fontFamily: 'Fredoka',
+                                    fontFamily: 'Baloo2 ExtraBold',
                                     fontSize: 13,
                                     color: Colors.white.withValues(alpha: 0.85),
                                     fontWeight: FontWeight.w500,
@@ -497,7 +502,7 @@ class _ThemeCardState extends State<_ThemeCard> {
                                     ),
                                     child: Text(widget.moreLabel,
                                         style: const TextStyle(
-                                          fontFamily: 'Fredoka',
+                                          fontFamily: 'Baloo2 ExtraBold',
                                           fontSize: 13,
                                           color: Colors.white,
                                           fontWeight: FontWeight.w600,

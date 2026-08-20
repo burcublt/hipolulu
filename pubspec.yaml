@@ -83,6 +83,7 @@ flutter:
   assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
+    - assets/images/
     - assets/images/hippo.png
     - assets/images/splash.png
     - assets/images/matching/animals/
@@ -110,18 +111,21 @@ flutter:
     - assets/voices/foods/es/
 
   fonts:
-    - family: Fredoka
+    - family: Baloo2
       fonts:
-        - asset: assets/fonts/Fredoka-Regular.ttf
-    - family: Fredoka Bold
+        - asset: assets/fonts/Baloo2-Regular.ttf
+    - family: Baloo2 Bold
       fonts:
-        - asset: assets/fonts/Fredoka-Bold.ttf
-    - family: Fredoka Medium
+        - asset: assets/fonts/Baloo2-Bold.ttf
+    - family: Baloo2 Medium
       fonts:
-        - asset: assets/fonts/Fredoka-Medium.ttf
-    - family: Fredoka SemiBold
+        - asset: assets/fonts/Baloo2-Medium.ttf
+    - family: Baloo2 SemiBold
       fonts:
-        - asset: assets/fonts/Fredoka-SemiBold.ttf
+        - asset: assets/fonts/Baloo2-SemiBold.ttf
+    - family: Baloo2 ExtraBold
+      fonts:
+        - asset: assets/fonts/Baloo2-ExtraBold.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

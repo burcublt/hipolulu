@@ -191,7 +191,8 @@ class _BackButtonState extends State<_BackButton> {
               Text(
                 AppLocalizations.of(context)!.back,
                 style: const TextStyle(
-                  fontFamily: 'Fredoka Bold',
+                  fontFamily: 'Baloo2 ExtraBold',
+                  fontWeight: FontWeight.bold,
                   fontSize: 19,
                   color: Color(0xFF5C28A0),
                 ),
@@ -222,7 +223,8 @@ class _TitleSection extends StatelessWidget {
           l10n.chooseTheme,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontFamily: 'Fredoka Bold',
+            fontFamily: 'Baloo2 ExtraBold',
+            fontWeight: FontWeight.bold,
             fontSize: isLandscape ? 26 : 34,
             height: 1,
             color: const Color(0xFF5C28A0),
@@ -235,7 +237,7 @@ class _TitleSection extends StatelessWidget {
         Text(
           l10n.pickYourAdventure,
           style: TextStyle(
-            fontFamily: 'Fredoka Bold',
+            fontFamily: 'Baloo2 ExtraBold',
             fontSize: isLandscape ? 13 : 16,
             color: const Color(0xFF7854B8),
             fontWeight: FontWeight.w500,
@@ -406,7 +408,7 @@ class _PuzzleThemeCardState extends State<_PuzzleThemeCard>
                               Text(
                                 theme.label,
                                 style: TextStyle(
-                                  fontFamily: 'Fredoka Bold',
+                                  fontFamily: 'Baloo2 ExtraBold',
                                   fontSize: 22,
                                   color: theme.locked
                                       ? const Color(0xFF7870A8)
@@ -427,7 +429,7 @@ class _PuzzleThemeCardState extends State<_PuzzleThemeCard>
                               Text(
                                 theme.sublabel,
                                 style: TextStyle(
-                                  fontFamily: 'Fredoka Bold',
+                                  fontFamily: 'Baloo2 ExtraBold',
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                   color: theme.locked
@@ -546,7 +548,8 @@ class _PuzzleThemeCardState extends State<_PuzzleThemeCard>
                       child: Text(
                         widget.playNowLabel,
                         style: const TextStyle(
-                          fontFamily: 'Fredoka Bold',
+                          fontFamily: 'Baloo2 ExtraBold',
+                          fontWeight: FontWeight.bold,
                           fontSize: 13,
                           color: Colors.white,
                         ),
@@ -603,10 +606,9 @@ class _FooterHintState extends State<_FooterHint>
         widget.text,
         textAlign: TextAlign.center,
         style: const TextStyle(
-          fontFamily: 'Fredoka Bold',
+          fontFamily: 'Baloo2 ExtraBold',
           fontSize: 14,
           color: Color(0xFF7854B8),
-          fontWeight: FontWeight.w500,
         ),
       ),
     );

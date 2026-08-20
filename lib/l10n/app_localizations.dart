@@ -109,13 +109,13 @@ abstract class AppLocalizations {
   /// Subtitle under the app name
   ///
   /// In en, this message translates to:
-  /// **'✨ Learn · Play · Grow'**
+  /// **'Discover • Play • Learn'**
   String get tagline;
 
   /// No description provided for @chooseGame.
   ///
   /// In en, this message translates to:
-  /// **'🎮 Choose a Game!'**
+  /// **'Choose a Game!'**
   String get chooseGame;
 
   /// No description provided for @starsBadge.

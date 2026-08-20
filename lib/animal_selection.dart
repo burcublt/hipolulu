@@ -209,7 +209,8 @@ class _BackButtonState extends State<_BackButton> {
               const SizedBox(width: 2),
               Text(AppLocalizations.of(context)!.back,
                   style: const TextStyle(
-                    fontFamily: 'Fredoka Bold',
+                    fontFamily: 'Baloo2 ExtraBold',
+                    fontWeight: FontWeight.bold,
                     fontSize: 19,
                     color: Color(0xFF5C28A0),
                   )),
@@ -236,7 +237,7 @@ class _TitleSection extends StatelessWidget {
           l10n.pickAnimal,
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontFamily: 'Fredoka Bold',
+            fontFamily: 'Baloo2 ExtraBold',
             fontSize: 34,
             height: 1,
             color: Color(0xFF5C28A0),
@@ -247,7 +248,7 @@ class _TitleSection extends StatelessWidget {
         Text(
           l10n.choosePuzzleBuddy,
           style: const TextStyle(
-            fontFamily: 'Fredoka',
+            fontFamily: 'Baloo2 ExtraBold',
             fontSize: 15,
             color: Color(0xFF7854B8),
             fontWeight: FontWeight.w500,
@@ -456,9 +457,11 @@ class _AnimalCardState extends State<_AnimalCard>
 
                               // Name
                               Text(
-                                AppLocalizations.of(context)!.animalName(a.id.name),
+                                AppLocalizations.of(context)!
+                                    .animalName(a.id.name),
                                 style: TextStyle(
-                                  fontFamily: 'Fredoka Bold',
+                                  fontFamily: 'Baloo2 ExtraBold',
+                                  fontWeight: FontWeight.bold,
                                   fontSize: 18,
                                   color: a.locked
                                       ? const Color(0xFF8878B8)
@@ -492,7 +495,7 @@ class _AnimalCardState extends State<_AnimalCard>
                                       const SizedBox(width: 4),
                                       Text(AppLocalizations.of(context)!.locked,
                                           style: const TextStyle(
-                                            fontFamily: 'Fredoka',
+                                            fontFamily: 'Baloo2 ExtraBold',
                                             fontSize: 11,
                                             color: Color(0xFF7868A8),
                                             fontWeight: FontWeight.w600,
@@ -566,7 +569,8 @@ class _AnimalCardState extends State<_AnimalCard>
                         child: Text(
                           AppLocalizations.of(context)!.play,
                           style: const TextStyle(
-                            fontFamily: 'Fredoka Bold',
+                            fontFamily: 'Baloo2 ExtraBold',
+                            fontWeight: FontWeight.bold,
                             fontSize: 10,
                             color: Colors.white,
                           ),

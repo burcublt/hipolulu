@@ -12,10 +12,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'HippoLulu';
 
   @override
-  String get tagline => '✨ Learn · Play · Grow';
+  String get tagline => 'Discover • Play • Learn';
 
   @override
-  String get chooseGame => '🎮 Choose a Game!';
+  String get chooseGame => 'Choose a Game!';
 
   @override
   String get starsBadge => '3 Stars!';

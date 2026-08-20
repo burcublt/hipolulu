@@ -4,11 +4,11 @@
   "@appTitle": {
     "description": "Application title"
   },
-  "tagline": "✨ Learn · Play · Grow",
+  "tagline": "Discover • Play • Learn",
   "@tagline": {
     "description": "Subtitle under the app name"
   },
-  "chooseGame": "🎮 Choose a Game!",
+  "chooseGame": "Choose a Game!",
   "starsBadge": "3 Stars!",
   "locked": "Locked",
   "tapToPlay": "TAP TO PLAY!",

@@ -287,7 +287,8 @@ class _PuzzleArenaState extends State<PuzzleArena>
       c.dispose();
     }
     introCtrl.dispose();
-    SystemChrome.setPreferredOrientations(DeviceOrientation.values).catchError((_) {});
+    SystemChrome.setPreferredOrientations(DeviceOrientation.values)
+        .catchError((_) {});
     super.dispose();
   }
 
@@ -467,7 +468,7 @@ class _PuzzleArenaState extends State<PuzzleArena>
                                 child: Text(
                                     '${placed.length} / ${pieces.length}',
                                     style: const TextStyle(
-                                        fontFamily: 'Fredoka',
+                                        fontFamily: 'Baloo2 ExtraBold',
                                         fontSize: 16,
                                         color: Color(0xFF7854B8),
                                         fontWeight: FontWeight.bold)),
@@ -688,7 +689,7 @@ class _RotateDevicePromptState extends State<_RotateDevicePrompt>
               AppLocalizations.of(context)!.rotateDevicePrompt,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                  fontFamily: 'Fredoka',
+                  fontFamily: 'Baloo2 ExtraBold',
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF5C28A0)),
@@ -929,12 +930,13 @@ class _WinOverlay extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(AppLocalizations.of(context)!.awesome,
                     style: const TextStyle(
-                        fontFamily: 'Fredoka One',
+                        fontFamily: 'Baloo2 ExtraBold',
+                        fontWeight: FontWeight.bold,
                         fontSize: 46,
                         color: Colors.white)),
                 Text(AppLocalizations.of(context)!.puzzleComplete(animalName),
                     style: const TextStyle(
-                        fontFamily: 'Fredoka',
+                        fontFamily: 'Baloo2 ExtraBold',
                         fontSize: 20,
                         color: Colors.white,
                         fontWeight: FontWeight.w600)),
@@ -964,7 +966,8 @@ class _WinOverlay extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999)),
                     child: Text(AppLocalizations.of(context)!.playAgain,
                         style: const TextStyle(
-                            fontFamily: 'Fredoka One',
+                            fontFamily: 'Baloo2 ExtraBold',
+                            fontWeight: FontWeight.bold,
                             fontSize: 22,
                             color: Color(0xFF3A7A10))),
                   ),

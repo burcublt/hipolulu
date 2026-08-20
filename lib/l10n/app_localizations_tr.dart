@@ -12,10 +12,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get appTitle => 'HippoLulu';
 
   @override
-  String get tagline => '✨ Öğren · Oyna · Geliş';
+  String get tagline => 'Keşfet • Oyna • Öğren';
 
   @override
-  String get chooseGame => '🎮 Bir Oyun Seç!';
+  String get chooseGame => 'Bir Oyun Seç!';
 
   @override
   String get starsBadge => '3 Yıldız!';
@@ -225,7 +225,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get pickAnimal => 'Bir Hayvan Seç! 🐾';
 
   @override
-  String get choosePuzzleBuddy => 'Choose your puzzle buddy';
+  String get choosePuzzleBuddy => 'Yapboz arkadaşını seç!';
 
   @override
   String get animalLion => 'Aslan';

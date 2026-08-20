@@ -84,10 +84,9 @@ class _PuzzleItemSelectionState extends State<PuzzleItemSelection> {
                             child: Text(
                               AppLocalizations.of(context)!.noPuzzlesFound,
                               style: const TextStyle(
-                                fontFamily: 'Fredoka Bold',
+                                fontFamily: 'Baloo2 ExtraBold',
                                 fontSize: 18,
                                 color: Color(0xFF7854B8),
-                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
@@ -188,7 +187,8 @@ class _BackButtonState extends State<_BackButton> {
               const SizedBox(width: 2),
               Text(AppLocalizations.of(context)!.back,
                   style: const TextStyle(
-                    fontFamily: 'Fredoka Bold',
+                    fontFamily: 'Baloo2 ExtraBold',
+                    fontWeight: FontWeight.bold,
                     fontSize: 19,
                     color: Color(0xFF5C28A0),
                   )),
@@ -221,7 +221,8 @@ class _TitleSection extends StatelessWidget {
           themeTitle,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontFamily: 'Fredoka Bold',
+            fontFamily: 'Baloo2 ExtraBold',
+            fontWeight: FontWeight.bold,
             fontSize: isLandscape ? 26 : 34,
             height: 1,
             color: const Color(0xFF5C28A0),
@@ -234,7 +235,7 @@ class _TitleSection extends StatelessWidget {
         Text(
           AppLocalizations.of(context)!.chooseYourPuzzle,
           style: const TextStyle(
-            fontFamily: 'Fredoka Bold',
+            fontFamily: 'Baloo2 ExtraBold',
             fontSize: 15,
             color: Color(0xFF7854B8),
             fontWeight: FontWeight.w500,
@@ -356,7 +357,8 @@ class _PuzzleItemCardState extends State<_PuzzleItemCard> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontFamily: 'Fredoka One',
+                            fontFamily: 'Baloo2 ExtraBold',
+                            fontWeight: FontWeight.bold,
                             fontSize: 17,
                             color: Colors.white,
                             shadows: [

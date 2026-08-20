@@ -8,6 +8,7 @@ class LanguagePickerSheet extends StatelessWidget {
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const LanguagePickerSheet(),
     );
@@ -26,64 +27,67 @@ class LanguagePickerSheet extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 44,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF5C28A0).withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(999),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5C28A0).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
-            ),
-            Text(
-              l10n.languageTitle,
-              style: const TextStyle(
-                fontFamily: 'Fredoka Bold',
-                fontSize: 20,
-                color: Color(0xFF5C28A0),
+              Text(
+                l10n.languageTitle,
+                style: const TextStyle(
+                  fontFamily: 'Baloo2 ExtraBold',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: Color(0xFF5C28A0),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            _LanguageTile(
-              label: l10n.languageDeviceDefault,
-              emoji: '📱',
-              selected: provider.isSelected(null),
-              onTap: () {
-                provider.useDeviceLocale();
-                Navigator.of(context).pop();
-              },
-            ),
-            _LanguageTile(
-              label: l10n.languageEnglish,
-              emoji: '🇬🇧',
-              selected: provider.isSelected(const Locale('en')),
-              onTap: () {
-                provider.setLocale(const Locale('en'));
-                Navigator.of(context).pop();
-              },
-            ),
-            _LanguageTile(
-              label: l10n.languageTurkish,
-              emoji: '🇹🇷',
-              selected: provider.isSelected(const Locale('tr')),
-              onTap: () {
-                provider.setLocale(const Locale('tr'));
-                Navigator.of(context).pop();
-              },
-            ),
-            _LanguageTile(
-              label: l10n.languageSpanish,
-              emoji: '🇪🇸',
-              selected: provider.isSelected(const Locale('es')),
-              onTap: () {
-                provider.setLocale(const Locale('es'));
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+              const SizedBox(height: 16),
+              _LanguageTile(
+                label: l10n.languageDeviceDefault,
+                emoji: '📱',
+                selected: provider.isSelected(null),
+                onTap: () {
+                  provider.useDeviceLocale();
+                  Navigator.of(context).pop();
+                },
+              ),
+              _LanguageTile(
+                label: l10n.languageEnglish,
+                emoji: '🇬🇧',
+                selected: provider.isSelected(const Locale('en')),
+                onTap: () {
+                  provider.setLocale(const Locale('en'));
+                  Navigator.of(context).pop();
+                },
+              ),
+              _LanguageTile(
+                label: l10n.languageTurkish,
+                emoji: '🇹🇷',
+                selected: provider.isSelected(const Locale('tr')),
+                onTap: () {
+                  provider.setLocale(const Locale('tr'));
+                  Navigator.of(context).pop();
+                },
+              ),
+              _LanguageTile(
+                label: l10n.languageSpanish,
+                emoji: '🇪🇸',
+                selected: provider.isSelected(const Locale('es')),
+                onTap: () {
+                  provider.setLocale(const Locale('es'));
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -125,7 +129,7 @@ class _LanguageTile extends StatelessWidget {
                   child: Text(
                     label,
                     style: TextStyle(
-                      fontFamily: 'Fredoka',
+                      fontFamily: 'Baloo2 ExtraBold',
                       fontSize: 16,
                       fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                       color: const Color(0xFF5C28A0),
