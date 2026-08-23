@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:hippolulu/l10n/app_localizations.dart';
@@ -10,6 +11,7 @@ import 'matching_theme_select.dart';
 import 'matching_game.dart';
 import 'puzzle_arena.dart';
 import 'asset_service.dart';
+import 'splash_screen.dart';
 
 // ─────────────────────────────────────────────
 //  ENTRY POINT
@@ -67,83 +69,71 @@ class HippoLuluApp extends StatelessWidget {
 
 // ─────────────────────────────────────────────
 //  SPLASH SCREEN
+//  The actual animated sequence lives in splash_screen.dart (SplashScreen)
+//  — this just wires its completion callback to the same MainMenu routing
+//  the old timer-based splash used.
 // ─────────────────────────────────────────────
-class CustomSplashScreen extends StatefulWidget {
+class CustomSplashScreen extends StatelessWidget {
   const CustomSplashScreen({Key? key}) : super(key: key);
 
-  @override
-  State<CustomSplashScreen> createState() => _CustomSplashScreenState();
-}
-
-class _CustomSplashScreenState extends State<CustomSplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Timer(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (ctx) => MainMenu(
-              onModeSelect: (modeId) {
-                if (modeId == 'puzzles') {
-                  Navigator.of(ctx).push(
-                    MaterialPageRoute(
-                      builder: (navCtx) => LevelSelection(
-                        onBack: () => Navigator.of(navCtx).pop(),
-                        onSelect: (theme) {
-                          Navigator.of(navCtx).push(
-                            MaterialPageRoute(
-                              builder: (selectionCtx) => PuzzleItemSelection(
-                                themeId: theme.id,
-                                themeTitle: theme.label,
-                                onBack: () => Navigator.of(selectionCtx).pop(),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  );
-                } else if (modeId == 'matching') {
-                  Navigator.of(ctx).push(
-                    MaterialPageRoute(
-                      builder: (navCtx) => MatchingThemeSelect(
-                        onBack: () => Navigator.of(navCtx).pop(),
-                        onSelect: (theme) {
-                          Navigator.of(navCtx).push(
-                            MaterialPageRoute(
-                              builder: (gameCtx) => MatchingGame(
-                                theme: theme,
-                                onBack: () => Navigator.of(gameCtx).pop(),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  );
-                }
-              },
-            ),
-          ),
-        );
-      }
-    });
+  void _goToMainMenu(BuildContext context) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (ctx) => MainMenu(
+          onModeSelect: (modeId) async {
+            await SystemChrome.setPreferredOrientations(DeviceOrientation.values)
+                .catchError((_) {});
+            if (modeId == 'puzzles') {
+              await Navigator.of(ctx).push(
+                MaterialPageRoute(
+                  builder: (navCtx) => LevelSelection(
+                    onBack: () => Navigator.of(navCtx).pop(),
+                    onSelect: (theme) {
+                      Navigator.of(navCtx).push(
+                        MaterialPageRoute(
+                          builder: (selectionCtx) => PuzzleItemSelection(
+                            themeId: theme.id,
+                            themeTitle: theme.label,
+                            onBack: () => Navigator.of(selectionCtx).pop(),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            } else if (modeId == 'matching') {
+              await Navigator.of(ctx).push(
+                MaterialPageRoute(
+                  builder: (navCtx) => MatchingThemeSelect(
+                    onBack: () => Navigator.of(navCtx).pop(),
+                    onSelect: (theme) {
+                      Navigator.of(navCtx).push(
+                        MaterialPageRoute(
+                          builder: (gameCtx) => MatchingGame(
+                            theme: theme,
+                            onBack: () => Navigator.of(gameCtx).pop(),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            }
+            SystemChrome.setPreferredOrientations([
+              DeviceOrientation.portraitUp,
+              DeviceOrientation.portraitDown,
+            ]).catchError((_) {});
+          },
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF18B5F6), // Görselin gökyüzü mavisi
-      body: Align(
-        alignment: Alignment.bottomCenter, // Görseli en alta yapıştırır
-        child: Image.asset(
-          'assets/images/splash.png',
-          fit: BoxFit
-              .fitWidth, // Genişliğe göre oturtur, alt çimenleri tabana sıfırlar
-        ),
-      ),
-    );
+    return SplashScreen(onFinished: () => _goToMainMenu(context));
   }
 }
 
@@ -224,12 +214,31 @@ List<GameMode> gameModes(AppLocalizations l10n) => [
 // ─────────────────────────────────────────────
 //  MAIN MENU
 // ─────────────────────────────────────────────
-class MainMenu extends StatelessWidget {
+class MainMenu extends StatefulWidget {
   final void Function(String) onModeSelect;
   const MainMenu({Key? key, required this.onModeSelect}) : super(key: key);
 
   @override
+  State<MainMenu> createState() => _MainMenuState();
+}
+
+class _MainMenuState extends State<MainMenu> {
+  @override
+  void initState() {
+    super.initState();
+    _lockPortrait();
+  }
+
+  void _lockPortrait() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]).catchError((_) {});
+  }
+
+  @override
   Widget build(BuildContext context) {
+    _lockPortrait();
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -241,7 +250,7 @@ class MainMenu extends StatelessWidget {
               children: [
                 // ── TOP BAR ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -251,25 +260,25 @@ class MainMenu extends StatelessWidget {
                   ),
                 ),
 
-                // ── HERO STACK (Logo + Hippo + Ribbon) ──
+                // ── HERO STACK (Logo + Hippo) ──
                 _HeroStack(
                   tagline: l10n.tagline,
                 ),
 
                 // ── GAME MODE GRID (in decorative frame) ──
-                // The "Bir Oyun Seç!" pill overlaps the top edge of the
-                // frame, so both live together in one Stack.
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 40, 16, 18),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 48,
+                  ),
                   child: Stack(
                     clipBehavior: Clip.none,
                     alignment: Alignment.topCenter,
                     children: [
                       Padding(
-                        // leaves room at the top for the pill to overlap
-                        padding: const EdgeInsets.only(top: 18),
+                        padding: const EdgeInsets.only(top: 16),
                         child: _GameFrame(
-                          child: _GameModeGrid(onModeSelect: onModeSelect),
+                          child: _GameModeGrid(onModeSelect: widget.onModeSelect),
                         ),
                       ),
                       Positioned(
@@ -279,10 +288,6 @@ class MainMenu extends StatelessWidget {
                     ],
                   ),
                 ),
-
-                // ── FOOTER ──
-                _ComingSoonFooter(text: l10n.comingSoon),
-                const SizedBox(height: 12),
               ],
             ),
           ),
@@ -402,14 +407,12 @@ class _HeroStack extends StatelessWidget {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
-    final logoWidth = isLandscape ? 300.0 : 400.0;
+    final logoWidth = isLandscape ? 800.0 : 500.0;
     final logoHeight = logoWidth / 1.74;
-    final hippoWidth = isLandscape ? 150.0 : 200.0;
+    final hippoWidth = isLandscape ? 200.0 : 225.0;
     final hippoHeight = hippoWidth / 0.945;
 
-    // Shorter now that the "Bir Oyun Seç!" pill has moved down to overlap
-    // the top of the game-mode frame instead of living in this stack.
-    final stackHeight = isLandscape ? 175.0 : 215.0;
+    final stackHeight = isLandscape ? 250.0 : 235.0;
 
     return SizedBox(
       width: double.infinity,
@@ -420,7 +423,7 @@ class _HeroStack extends StatelessWidget {
         children: [
           // 1. Logo Plaque (background of header)
           Positioned(
-            top: 0,
+            top: -30,
             child: SizedBox(
               width: logoWidth,
               height: logoHeight,
@@ -431,9 +434,9 @@ class _HeroStack extends StatelessWidget {
             ),
           ),
 
-          // 2. Hippo Mascot (tucked right behind ribbon, body extends down)
+          // 2. Hippo Mascot
           Positioned(
-            top: isLandscape ? 100 : 125,
+            top: isLandscape ? 120 : 130,
             child: SizedBox(
               width: hippoWidth,
               height: hippoHeight,
@@ -443,12 +446,6 @@ class _HeroStack extends StatelessWidget {
               ),
             ),
           ),
-
-          // 3. Tagline Ribbon (overlaps logo bottom and hippo upper chest)
-          // Positioned(
-          //   top: isLandscape ? 130 : 170,
-          //   child: _TaglineRibbon(tagline: tagline),
-          // ),
         ],
       ),
     );
@@ -799,17 +796,22 @@ class _GameModeGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final modes = gameModes(AppLocalizations.of(context)!);
-    double screenWidth = MediaQuery.of(context).size.width;
-    int crossAxisCount = screenWidth > 800 ? 4 : (screenWidth > 500 ? 3 : 2);
+    final screenW = MediaQuery.of(context).size.width;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    int crossAxisCount = (screenW > 600 || isLandscape) ? 4 : 2;
+    double childAspectRatio =
+        isLandscape ? 1.05 : ((screenW > 600) ? 0.76 : 0.88);
 
     return Align(
       alignment: Alignment.topCenter,
       child: GridView.count(
         shrinkWrap: true,
         crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.15,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
+        childAspectRatio: childAspectRatio,
         physics: const NeverScrollableScrollPhysics(),
         children: List.generate(modes.length, (i) {
           return _GameModeCard(
@@ -930,10 +932,10 @@ class _GameModeCardState extends State<_GameModeCard>
             width: double.infinity,
             decoration: BoxDecoration(
               color: cardBg,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(28),
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.65),
-                width: 3,
+                width: 3.5,
               ),
               boxShadow: [
                 BoxShadow(
@@ -949,7 +951,7 @@ class _GameModeCardState extends State<_GameModeCard>
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(21),
+              borderRadius: BorderRadius.circular(24),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -959,7 +961,7 @@ class _GameModeCardState extends State<_GameModeCard>
                     left: 0,
                     right: 0,
                     child: Container(
-                      height: 50,
+                      height: 60,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
@@ -976,52 +978,58 @@ class _GameModeCardState extends State<_GameModeCard>
                   // Content
                   Padding(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _EmojiCircle(
-                            emoji: mode.emoji,
-                            locked: mode.locked,
-                            controller: _emojiCtrl,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            mode.label,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Baloo2 ExtraBold',
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: mode.textColor,
-                              letterSpacing: 0.4,
-                              shadows: const [
-                                Shadow(
-                                  color: Colors.black12,
-                                  offset: Offset(0, 1),
-                                ),
-                              ],
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _EmojiCircle(
+                              emoji: mode.emoji,
+                              locked: mode.locked,
+                              controller: _emojiCtrl,
                             ),
-                          ),
-                          Text(
-                            mode.sublabel,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Baloo2 ExtraBold',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: mode.textColor.withValues(alpha: 0.85),
-                            ),
-                          ),
-                          if (mode.locked) ...[
                             const SizedBox(height: 6),
-                            _LockBadge(
-                              label: AppLocalizations.of(context)!.locked,
+                            Text(
+                              mode.label,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Baloo2 ExtraBold',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: mode.textColor,
+                                letterSpacing: 0.3,
+                                shadows: const [
+                                  Shadow(
+                                    color: Colors.black12,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(height: 2),
+                            Text(
+                              mode.sublabel,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Baloo2 ExtraBold',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: mode.textColor.withValues(alpha: 0.85),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            if (mode.locked)
+                              _LockBadge(
+                                label: AppLocalizations.of(context)!.locked,
+                              )
+                            else
+                              _PlayArrowCircle(arrowColor: mode.shadow),
                           ],
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -1107,9 +1115,9 @@ class _LockBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.90),
+        color: Colors.white.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(999),
         boxShadow: [
           BoxShadow(
@@ -1122,18 +1130,50 @@ class _LockBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.lock_rounded, size: 12, color: Color(0xFF5C28A0)),
+          const Icon(Icons.lock_rounded, size: 13, color: Color(0xFF5C28A0)),
           const SizedBox(width: 4),
           Text(
             label,
             style: const TextStyle(
               fontFamily: 'Baloo2 ExtraBold',
               fontWeight: FontWeight.bold,
-              fontSize: 11,
+              fontSize: 12,
               color: Color(0xFF5C28A0),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PlayArrowCircle extends StatelessWidget {
+  final Color arrowColor;
+
+  const _PlayArrowCircle({required this.arrowColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            offset: const Offset(0, 3),
+            blurRadius: 4,
+          ),
+        ],
+      ),
+      child: Center(
+        child: Icon(
+          Icons.keyboard_arrow_right_rounded,
+          size: 28,
+          color: arrowColor,
+        ),
       ),
     );
   }

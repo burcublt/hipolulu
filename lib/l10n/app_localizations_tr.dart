@@ -216,10 +216,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get beatAllLevels => '🏆 Tüm seviyeleri geçtin!';
 
   @override
-  String get retry => '🔄 Tekrar';
+  String get retry => 'Tekrar';
 
   @override
-  String get menu => '🏠 Menü';
+  String get menu => 'Menü';
 
   @override
   String get pickAnimal => 'Bir Hayvan Seç! 🐾';
@@ -268,7 +268,7 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get playAgain => 'Tekrar Oyna! 🔄';
+  String get playAgain => 'Tekrar Oyna!';
 
   @override
   String get pieceHead => 'Kafa';
@@ -315,4 +315,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get wrongAlmost => 'Neredeyse! Tekrar dene!';
+
+  @override
+  String get letsPlay => 'Haydi Oynayalım!';
 }

@@ -134,8 +134,8 @@
     }
   },
   "beatAllLevels": "🏆 You beat all levels!",
-  "retry": "🔄 Retry",
-  "menu": "🏠 Menu",
+  "retry": "Retry",
+  "menu": "Menu",
   "pickAnimal": "Pick an Animal! 🐾",
   "choosePuzzleBuddy": "Choose your puzzle buddy",
   "animalLion": "Lion",
@@ -164,7 +164,7 @@
       }
     }
   },
-  "playAgain": "Play Again! 🔄",
+  "playAgain": "Play Again!",
   "pieceHead": "Head",
   "pieceBody": "Body",
   "pieceTail": "Tail",
@@ -179,5 +179,6 @@
   "wrongSoClose": "So close! Keep going!",
   "wrongYouCanDoIt": "You can do it!",
   "wrongNotQuite": "Hmm, not quite!",
-  "wrongAlmost": "Almost! Try again!"
+  "wrongAlmost": "Almost! Try again!",
+  "letsPlay": "Let's Play!"
 }

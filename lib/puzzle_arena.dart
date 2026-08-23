@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
@@ -23,6 +24,16 @@ const double kTrayPad = 8;
 const double kBoardMargin = 8;
 const double kBoardPad = 8;
 
+/// The board is normally sized to fill whatever space is available (width
+/// or height, whichever is the tighter fit) minus the small fixed margins
+/// above. That works fine on a phone, but on a tablet — where there's a
+/// lot of vertical room — it meant the board could balloon up to nearly
+/// the full screen height. This caps it at a fraction of the available
+/// height instead, so there's always some visible breathing room around
+/// it on bigger screens. Lower this (e.g. 0.72) to shrink the board
+/// further; raise it (closer to 1.0) to let it grow bigger again.
+const double kBoardMaxHeightFraction = 0.82;
+
 // ─────────────────────────────────────────────
 //  JIGSAW MODELS & LOGIC
 // ─────────────────────────────────────────────
@@ -34,6 +45,13 @@ class JigsawPiece {
   final String id;
   JigsawPiece(this.row, this.col, this.top, this.right, this.bottom, this.left)
       : id = '${row}_$col';
+}
+
+/// Simple (row, col) pair — used instead of a Dart 3 record type so this
+/// file keeps working on older SDK constraints (records need Dart 3.0+).
+class _BoardCell {
+  final int row, col;
+  const _BoardCell(this.row, this.col);
 }
 
 /// Rows/cols pair for a given total piece count.
@@ -56,6 +74,27 @@ _GridSize _gridSizeForPieceCount(int count) {
       final rows = (count / cols).ceil();
       return _GridSize(rows, cols);
   }
+}
+
+/// Rough near-square grid dimensions for laying out `n` scattered tray
+/// pieces WITHOUT overlap. Used both to pick each piece's initial resting
+/// position (as a fraction of the scatter area — see initState/_handleReset)
+/// and, later, to size the piece boxes against the *actual* on-screen
+/// scatter area inside the LayoutBuilder. Using the same n-only formula in
+/// both places keeps them in sync regardless of how many pieces there are:
+/// more pieces automatically means more (smaller) grid cells instead of a
+/// fixed box size that inevitably overlaps once there are more than a
+/// handful of pieces.
+_GridSize _scatterGridDims(int n) {
+  // The tray column is usually narrower than it is tall, so assume a bit
+  // of that instead of a perfectly square layout — this only affects each
+  // piece's *starting* resting spot (for spreading them apart initially);
+  // actual piece *size* is computed separately against the real, on-screen
+  // scatter area (see the LayoutBuilder in _buildGame), so this doesn't
+  // need to be pixel-perfect.
+  final cols = max(2, sqrt(n * 0.6).ceil());
+  final rows = (n / cols).ceil();
+  return _GridSize(rows, cols);
 }
 
 /// Generates a rows x cols jigsaw grid with randomly assigned tab/blank
@@ -188,6 +227,11 @@ class PuzzleArena extends StatefulWidget {
   final String imagePath;
   final VoidCallback onBack;
 
+  /// Called when the player taps "Diğer Oyuna Geç" on the win screen.
+  /// Optional for now — if you don't pass one, the button simply does
+  /// nothing (no crash). Wire it up later to your "go to next game" flow.
+  final VoidCallback? onNextGame;
+
   /// How many pieces the puzzle should have (6 / 8 / 12 map to a matching
   /// grid via _gridSizeForPieceCount; any other count falls back to a
   /// roughly-square grid).
@@ -197,6 +241,7 @@ class PuzzleArena extends StatefulWidget {
     super.key,
     required this.imagePath,
     required this.onBack,
+    this.onNextGame,
     this.pieceCount = 12,
   });
 
@@ -240,8 +285,7 @@ class _PuzzleArenaState extends State<PuzzleArena>
     pieces = generateGrid(rows, cols)..shuffle();
 
     final rnd = Random();
-    scatterFrac = List.generate(
-        pieces.length, (_) => Offset(rnd.nextDouble(), rnd.nextDouble()));
+    scatterFrac = _scatterFrac(pieces.length, rnd);
     scatterRot = List.generate(
         pieces.length, (_) => (rnd.nextDouble() - 0.5) * 0.5); // ~ -14° .. +14°
 
@@ -304,6 +348,55 @@ class _PuzzleArenaState extends State<PuzzleArena>
     return Curves.easeInOut.transform(t);
   }
 
+  /// Converts a drag's global drop position into a (row, col) board cell,
+  /// clamped to the grid. `dragCenterOffset` corrects for the fact that
+  /// Flutter's DragTargetDetails.offset is the *top-left* of the dragged
+  /// feedback widget, not the finger/pointer position — passing half the
+  /// feedback's size here recovers the (much more intuitive) center point,
+  /// so the cell a piece lands on matches where it visually looks dropped.
+  _BoardCell? _cellAt(
+    Offset globalOffset,
+    Rect boardRect,
+    double frameW,
+    double frameH,
+    double cellW,
+    double cellH,
+    int rows,
+    int cols, {
+    Offset dragCenterOffset = Offset.zero,
+  }) {
+    final stackBox = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+    if (stackBox == null) return null;
+    final local = stackBox.globalToLocal(globalOffset + dragCenterOffset);
+    final col = (((local.dx - boardRect.left - frameW) / cellW).floor())
+        .clamp(0, cols - 1);
+    final row = (((local.dy - boardRect.top - frameH) / cellH).floor())
+        .clamp(0, rows - 1);
+    return _BoardCell(row, col);
+  }
+
+  /// Starting resting positions for the tray pile: one per grid cell (see
+  /// `_scatterGridDims`) plus a small random nudge, instead of a fully
+  /// random `Offset` per piece. Fully random positions are what caused
+  /// pieces to pile up on top of each other and become unreadable/hard to
+  /// grab once there were more than 3-4 of them — placing each piece in
+  /// its own cell first guarantees they start out spread apart, and the
+  /// small nudge (plus each piece's own random tilt) keeps the "tossed
+  /// into a pile" look instead of a perfectly robotic grid.
+  List<Offset> _scatterFrac(int n, Random rnd) {
+    final grid = _scatterGridDims(n);
+    return List.generate(n, (i) {
+      final col = i % grid.cols;
+      final row = i ~/ grid.cols;
+      final jitterX = (rnd.nextDouble() - 0.5) * (0.12 / grid.cols);
+      final jitterY = (rnd.nextDouble() - 0.5) * (0.12 / grid.rows);
+      return Offset(
+        (col / grid.cols + jitterX).clamp(0.0, 1.0),
+        (row / grid.rows + jitterY).clamp(0.0, 1.0),
+      );
+    });
+  }
+
   void _handleDrop(String pieceId, String slotId) {
     if (pieceId == slotId) {
       setState(() => placed.add(pieceId));
@@ -335,8 +428,7 @@ class _PuzzleArenaState extends State<PuzzleArena>
       pieces.shuffle();
       introDone = false;
       final rnd = Random();
-      scatterFrac = List.generate(
-          pieces.length, (_) => Offset(rnd.nextDouble(), rnd.nextDouble()));
+      scatterFrac = _scatterFrac(pieces.length, rnd);
       scatterRot =
           List.generate(pieces.length, (_) => (rnd.nextDouble() - 0.5) * 0.5);
     });
@@ -398,14 +490,46 @@ class _PuzzleArenaState extends State<PuzzleArena>
                   trayOuter.width - kTrayPad * 2,
                   trayOuter.height - kTrayHeaderH - kTrayPad * 2,
                 );
-                final pieceBoxW = scatterArea.width * 0.55;
+                // Where each piece starts resting (roughly one per grid
+                // cell — see _scatterGridDims) was already picked back in
+                // initState/_handleReset. The actual on-screen *size* of
+                // each piece is computed fresh below, against the real
+                // scatter area, so it stays correctly sized regardless of
+                // device.
+                // Size each tray piece to fit its own grid cell (with a
+                // little breathing room) instead of a fixed 55% of the
+                // whole scatter area regardless of how many pieces there
+                // are — that fixed size is what made pieces pile up on
+                // top of each other once there were more than a handful.
+                //
+                // Rather than guessing a device-size threshold (phone vs.
+                // tablet), pick the cols/rows split that best matches the
+                // *actual* scatter area's real aspect ratio, so pieces are
+                // always as big as they can possibly be without
+                // overlapping too much — this alone makes pieces bigger on
+                // a tablet (more real estate → bigger cells) without any
+                // magic size-boost constants to tune per device class.
+                final n = pieces.length;
+                final arenaAspect = scatterArea.width / scatterArea.height;
+                int sizingCols = sqrt(n * arenaAspect).round().clamp(1, n);
+                int sizingRows = (n / sizingCols).ceil();
+                final trayCellW = scatterArea.width / sizingCols;
+                final trayCellH = scatterArea.height / sizingRows;
+                // Pieces are irregular jigsaw shapes with a lot of
+                // transparent margin around the actual art, so letting the
+                // box run a bit larger than its cell (1.15x) still reads
+                // as "nicely sized pieces in a pile", not clutter.
+                final pieceBoxW = min(trayCellW, trayCellH) * 1.15;
                 final pieceBoxH = pieceBoxW;
 
                 // ── Board geometry (absolute coords) ──
                 final boardOuter = Rect.fromLTWH(trayW, 0, boardAreaW, totalH)
                     .deflate(kBoardMargin);
                 final boardPadded = boardOuter.deflate(kBoardPad);
-                final squareSize = min(boardPadded.width, boardPadded.height);
+                final squareSize = min(
+                  min(boardPadded.width, boardPadded.height),
+                  totalH * kBoardMaxHeightFraction,
+                );
                 final boardRect = Rect.fromCenter(
                     center: boardPadded.center,
                     width: squareSize,
@@ -539,20 +663,44 @@ class _PuzzleArenaState extends State<PuzzleArena>
                           );
                         }),
 
-                        // ── board slots (drag targets) ──
-                        for (int i = 0; i < pieces.length; i++)
-                          Positioned.fromRect(
-                            rect: pieceBoardRect(pieces[i]),
-                            child: _BoardSlot(
-                              piece: pieces[i],
-                              cellW: cellW,
-                              cellH: cellH,
-                              isPlaced: introDone
-                                  ? placed.contains(pieces[i].id)
-                                  : _localProgress(i) <= 0.0,
-                              onDrop: _handleDrop,
-                            ),
+                        // ── board drop target ──
+                        // ONE DragTarget covering the whole board, instead
+                        // of a separate small target per piece. We figure
+                        // out which cell a drop belongs to from *where* it
+                        // lands (nearest cell, clamped to the grid), which
+                        // is far more forgiving than requiring the piece to
+                        // land inside its own small, oftentimes-overlapping
+                        // target rect — that overlap was exactly what made
+                        // it so easy to "miss" on a phone, where fingers
+                        // are big relative to the cells.
+                        Positioned.fromRect(
+                          rect: boardOuter,
+                          child: DragTarget<String>(
+                            onAcceptWithDetails: (details) {
+                              final cell = _cellAt(
+                                details.offset,
+                                boardRect,
+                                frameW,
+                                frameH,
+                                cellW,
+                                cellH,
+                                rows,
+                                cols,
+                                dragCenterOffset:
+                                    Offset(pieceBoxW * 0.5, pieceBoxH * 0.5),
+                              );
+                              if (cell == null) return;
+                              final target = pieces.firstWhere((p) =>
+                                  p.row == cell.row && p.col == cell.col);
+                              _handleDrop(details.data, target.id);
+                            },
+                            builder: (context, candidates, rejected) {
+                              // No hover highlight — keeps the board clean
+                              // while dragging.
+                              return const SizedBox.shrink();
+                            },
                           ),
+                        ),
 
                         // ── flying / resting tray pieces ──
                         for (int i = 0; i < pieces.length; i++)
@@ -575,19 +723,37 @@ class _PuzzleArenaState extends State<PuzzleArena>
                                       rows: rows,
                                       cols: cols,
                                       onDragEnd: (details) {
-                                        // Dropped somewhere — if that's inside the tray's
-                                        // scatter area, move this piece's resting spot
-                                        // there. If it's outside (e.g. on the board),
-                                        // the board's own DragTarget already handled it
-                                        // via _handleDrop, so we do nothing extra here.
+                                        // Move this piece's resting spot to
+                                        // wherever it was dropped, clamped
+                                        // to stay inside the tray. We used
+                                        // to bail out entirely (leaving the
+                                        // piece at its old spot) whenever
+                                        // the drop point measured as just
+                                        // outside the scatter area — but
+                                        // that early-exit is exactly what
+                                        // made drops feel like they
+                                        // "silently failed" and snapped
+                                        // back, even for drops that looked
+                                        // perfectly fine inside the tray.
+                                        // Always clamping instead means a
+                                        // drop is *never* silently ignored:
+                                        // worst case it lands at the
+                                        // nearest valid tray edge instead
+                                        // of exactly where you aimed.
+                                        //
+                                        // `details.offset` is also the
+                                        // *top-left* of the dragged piece,
+                                        // not where you visually dropped
+                                        // it — adding half the piece size
+                                        // recovers its center.
                                         final stackBox = _stackKey
                                             .currentContext
                                             ?.findRenderObject() as RenderBox?;
                                         if (stackBox == null) return;
                                         final localPoint = stackBox
-                                            .globalToLocal(details.offset);
-                                        if (!scatterArea.contains(localPoint))
-                                          return;
+                                            .globalToLocal(details.offset +
+                                                Offset(pieceBoxW / 2,
+                                                    pieceBoxH / 2));
                                         final fx = ((localPoint.dx -
                                                     scatterArea.left) /
                                                 (scatterArea.width - pieceBoxW))
@@ -619,6 +785,10 @@ class _PuzzleArenaState extends State<PuzzleArena>
               celebCtrl: _celebCtrl,
               starCtrls: _starCtrls,
               onReset: _handleReset,
+              onBack: widget.onBack,
+              onNextGame: widget.onNextGame ?? () {},
+              placedCount: placed.length,
+              totalCount: pieces.length,
             ),
         ],
       ),
@@ -790,69 +960,6 @@ class _TrayPiece extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-//  BOARD SLOT (DragTarget). No longer self-positions — the parent places
-//  it via Positioned.fromRect so it shares the same coordinate space the
-//  intro-flight math uses.
-// ─────────────────────────────────────────────
-class _BoardSlot extends StatefulWidget {
-  final JigsawPiece piece;
-  final double cellW, cellH;
-  final bool isPlaced;
-  final void Function(String, String) onDrop;
-
-  const _BoardSlot({
-    required this.piece,
-    required this.cellW,
-    required this.cellH,
-    required this.isPlaced,
-    required this.onDrop,
-  });
-
-  @override
-  State<_BoardSlot> createState() => _BoardSlotState();
-}
-
-class _BoardSlotState extends State<_BoardSlot> {
-  bool isOver = false;
-
-  @override
-  Widget build(BuildContext context) {
-    double overflowW = widget.cellW * 0.3;
-    double overflowH = widget.cellH * 0.3;
-
-    return DragTarget<String>(
-      onWillAcceptWithDetails: (_) {
-        if (!widget.isPlaced) setState(() => isOver = true);
-        return !widget.isPlaced;
-      },
-      onLeave: (_) => setState(() => isOver = false),
-      onAcceptWithDetails: (details) {
-        setState(() => isOver = false);
-        widget.onDrop(details.data, widget.piece.id);
-      },
-      builder: (context, candidates, rejected) {
-        if (widget.isPlaced) {
-          // Nothing to draw: the full board image (painted once, underneath
-          // everything) already shows the correct artwork here.
-          return const SizedBox.shrink();
-        }
-
-        // The permanent cover for unsolved cells is drawn once, as a single
-        // unioned shape, by the parent (see the "unified cover" builder in
-        // _buildGame) — that's what avoids the seam. This slot only adds a
-        // transient highlight while a piece is being dragged over it.
-        if (!isOver) return const SizedBox.shrink();
-        return ClipPath(
-          clipper: JigsawClipper(
-              widget.piece, widget.cellW, widget.cellH, overflowW, overflowH),
-          child: Container(color: const Color(0xFFF5C68A)),
-        );
-      },
-    );
-  }
-}
-
-// ─────────────────────────────────────────────
 //  BACK BUTTON
 // ─────────────────────────────────────────────
 class _BackButton extends StatelessWidget {
@@ -879,11 +986,20 @@ class _BackButton extends StatelessWidget {
 // ─────────────────────────────────────────────
 //  WIN OVERLAY
 // ─────────────────────────────────────────────
+//
+// Asset checklist — add these files and register them under `assets:` in
+// pubspec.yaml before running:
+//   assets/images/win/win_flame.webp    (yellow frame + balloons + stars + confetti, all baked in)
+//   assets/images/win/roket_hippo.webp  (mascot)
 class _WinOverlay extends StatelessWidget {
   final String animalName;
   final AnimationController winCtrl, celebCtrl;
   final List<AnimationController> starCtrls;
   final VoidCallback onReset;
+  final VoidCallback onBack;
+  final VoidCallback onNextGame;
+  final int placedCount;
+  final int totalCount;
 
   const _WinOverlay({
     required this.animalName,
@@ -891,90 +1007,277 @@ class _WinOverlay extends StatelessWidget {
     required this.celebCtrl,
     required this.starCtrls,
     required this.onReset,
+    required this.onBack,
+    required this.onNextGame,
+    required this.placedCount,
+    required this.totalCount,
   });
 
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: CurvedAnimation(parent: winCtrl, curve: Curves.easeIn),
-      child: Container(
-        color: const Color(0xFF78C850).withValues(alpha: 0.93),
-        child: Center(
-          child: ScaleTransition(
-            scale: CurvedAnimation(parent: winCtrl, curve: Curves.elasticOut),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AnimatedBuilder(
-                      animation: celebCtrl,
-                      builder: (_, child) {
-                        final angle = (-10 + 20 * celebCtrl.value) * pi / 180;
-                        return Transform.rotate(angle: angle, child: child);
-                      },
-                      child: const Text('🐻', style: TextStyle(fontSize: 80)),
-                    ),
-                    const SizedBox(width: 20),
-                    AnimatedBuilder(
-                      animation: celebCtrl,
-                      builder: (_, child) {
-                        final angle = (10 - 20 * celebCtrl.value) * pi / 180;
-                        return Transform.rotate(angle: angle, child: child);
-                      },
-                      child: const Text('👮', style: TextStyle(fontSize: 80)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(AppLocalizations.of(context)!.awesome,
-                    style: const TextStyle(
-                        fontFamily: 'Baloo2 ExtraBold',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 46,
-                        color: Colors.white)),
-                Text(AppLocalizations.of(context)!.puzzleComplete(animalName),
-                    style: const TextStyle(
-                        fontFamily: 'Baloo2 ExtraBold',
-                        fontSize: 20,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                      3,
-                      (i) => Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 5),
-                            child: ScaleTransition(
-                                scale: CurvedAnimation(
-                                    parent: starCtrls[i],
-                                    curve: Curves.elasticOut),
-                                child: const Text('⭐',
-                                    style: TextStyle(fontSize: 40))),
-                          )),
-                ),
-                const SizedBox(height: 20),
-                GestureDetector(
-                  onTap: onReset,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 44, vertical: 16),
-                    decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(999)),
-                    child: Text(AppLocalizations.of(context)!.playAgain,
-                        style: const TextStyle(
-                            fontFamily: 'Baloo2 ExtraBold',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 22,
-                            color: Color(0xFF3A7A10))),
-                  ),
-                ),
-              ],
+      child: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
+        children: [
+          // ── 1. Dimmed / blurred glimpse of the fairground scene behind ──
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: Container(color: Colors.black.withValues(alpha: 0.18)),
             ),
           ),
+
+          // ── 2. The win card (frame image + ribbon + mascot + buttons) ──
+          Center(
+            child: ScaleTransition(
+              scale: CurvedAnimation(parent: winCtrl, curve: Curves.elasticOut),
+              child: _WinCard(
+                animalName: animalName,
+                celebCtrl: celebCtrl,
+                onReset: onReset,
+                onNextGame: onNextGame,
+              ),
+            ),
+          ),
+
+          // ── 3. Top bar (Geri + X / Y) — stays on top of everything ──
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _BackButton(onTap: onBack),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.68),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '$placedCount / $totalCount',
+                      style: const TextStyle(
+                          fontFamily: 'Baloo2 ExtraBold',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Color(0xFF5C28A0)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+//  WIN CARD
+//  A single pre-made frame image (win_flame.webp — yellow scalloped
+//  border, stars, balloons, confetti all baked in) with the ribbon,
+//  mascot and buttons layered on top of its blank inner area.
+//
+//  Everything below is laid out on a fixed-size "design canvas"
+//  (_designWidth × _designHeight) and then the *whole* canvas is scaled
+//  uniformly to fit the device via FittedBox. That keeps every proportion
+//  (button size, mascot size, ribbon size...) identical on a phone and on
+//  a tablet — it just gets bigger or smaller as one piece, so buttons
+//  never spill past the frame and the card never looks tiny on iPad.
+// ─────────────────────────────────────────────
+class _WinCard extends StatelessWidget {
+  final String animalName;
+  final AnimationController celebCtrl;
+  final VoidCallback onReset;
+  final VoidCallback onNextGame;
+
+  // Matches the win_flame.webp source dimensions (1536×1024).
+  static const double _frameAspectRatio = 1536 / 1024;
+  static const double _designWidth = 480;
+  static const double _designHeight =
+      _designWidth / _frameAspectRatio; // ~320px
+
+  const _WinCard({
+    required this.animalName,
+    required this.celebCtrl,
+    required this.onReset,
+    required this.onNextGame,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxW = constraints.hasBoundedWidth ? constraints.maxWidth : 800.0;
+        final maxH =
+            constraints.hasBoundedHeight ? constraints.maxHeight : 800.0;
+        final shortSide = maxW < maxH ? maxW : maxH;
+
+        // Base size: scales up on tablets
+        double cardWidth = (shortSide * 0.92).clamp(340.0, 820.0);
+
+        final maxCardHeight = maxH * 0.82;
+        if (cardWidth / _frameAspectRatio > maxCardHeight) {
+          cardWidth = maxCardHeight * _frameAspectRatio;
+        }
+
+        return SizedBox(
+          width: cardWidth,
+          height: cardWidth / _frameAspectRatio,
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: SizedBox(
+              width: _designWidth,
+              height: _designHeight,
+              child: Stack(
+                alignment: Alignment.topCenter,
+                clipBehavior: Clip.none,
+                children: [
+                  // 1. Frame background (yellow scalloped border + balloons + stars)
+                  Image.asset(
+                    'assets/images/win_flame.webp',
+                    width: _designWidth,
+                    height: _designHeight,
+                    fit: BoxFit.fill,
+                  ),
+
+                  // 2. Hippo Mascot — static (no movement animation), sitting lower
+                  // so its lower body tucks behind the buttons row.
+                  Positioned(
+                    top: 92,
+                    child: Image.asset(
+                      'assets/images/hippo.webp',
+                      height: 155,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+
+                  // 3. Ribbon banner ("Harika!"), sitting clearly above Hippo's head
+                  Positioned(
+                    top: 36,
+                    child: SizedBox(
+                      width: 210,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/ribbon.webp',
+                            fit: BoxFit.contain,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              AppLocalizations.of(context)!.awesome,
+                              style: const TextStyle(
+                                  fontFamily: 'Baloo2 ExtraBold',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // 4. Buttons, right at the frame's bottom edge, painted over Hippo's legs
+                  Positioned(
+                    bottom: -8,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _WinButton(
+                          label: AppLocalizations.of(context)!.playAgain,
+                          icon: Icons.refresh_rounded,
+                          colors: const [Color(0xFF8CDB4E), Color(0xFF5CB82E)],
+                          onTap: onReset,
+                        ),
+                        const SizedBox(width: 10),
+                        _WinButton(
+                          label: 'Diğer Oyuna Geç',
+                          icon: Icons.arrow_forward_rounded,
+                          colors: const [Color(0xFF5AB8FF), Color(0xFF2E8CE0)],
+                          onTap: onNextGame,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+//  WIN SCREEN PILL BUTTON (Tekrar Oyna / Diğer Oyuna Geç)
+// ─────────────────────────────────────────────
+class _WinButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final List<Color> colors;
+  final VoidCallback onTap;
+
+  const _WinButton({
+    required this.label,
+    required this.icon,
+    required this.colors,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: colors,
+          ),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: colors.last.withValues(alpha: 0.5),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Two overlapping icons (a soft dark "shadow" copy behind the
+            // white one) give the glyph extra visual weight — reads as a
+            // bolder icon without needing a custom icon asset.
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(icon,
+                    color: Colors.black.withValues(alpha: 0.18), size: 16),
+                Icon(icon, color: Colors.white, size: 15),
+              ],
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                  fontFamily: 'Baloo2 ExtraBold',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12.5,
+                  color: Colors.white),
+            ),
+          ],
         ),
       ),
     );

@@ -481,13 +481,13 @@ abstract class AppLocalizations {
   /// No description provided for @retry.
   ///
   /// In en, this message translates to:
-  /// **'🔄 Retry'**
+  /// **'Retry'**
   String get retry;
 
   /// No description provided for @menu.
   ///
   /// In en, this message translates to:
-  /// **'🏠 Menu'**
+  /// **'Menu'**
   String get menu;
 
   /// No description provided for @pickAnimal.
@@ -577,7 +577,7 @@ abstract class AppLocalizations {
   /// No description provided for @playAgain.
   ///
   /// In en, this message translates to:
-  /// **'Play Again! 🔄'**
+  /// **'Play Again!'**
   String get playAgain;
 
   /// No description provided for @pieceHead.
@@ -669,6 +669,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Almost! Try again!'**
   String get wrongAlmost;
+
+  /// No description provided for @letsPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s Play!'**
+  String get letsPlay;
 }
 
 class _AppLocalizationsDelegate

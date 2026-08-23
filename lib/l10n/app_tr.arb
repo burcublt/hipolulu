@@ -63,8 +63,8 @@
   "matchedAllSummary": "Tüm {pairs} çifti {moves} hamlede eşleştirdin!",
   "nextLevel": "🚀 {level} — {cards} kart!",
   "beatAllLevels": "🏆 Tüm seviyeleri geçtin!",
-  "retry": "🔄 Tekrar",
-  "menu": "🏠 Menü",
+  "retry": "Tekrar",
+  "menu": "Menü",
   "pickAnimal": "Bir Hayvan Seç! 🐾",
   "choosePuzzleBuddy": "Yapboz arkadaşını seç!",
   "animalLion": "Aslan",
@@ -79,7 +79,7 @@
   "dragPiecesAbove": "PARÇALARI YUKARI SÜRÜKLE!",
   "youDidIt": "Başardın!",
   "puzzleComplete": "{animal} yapbozu tamam! 🌟",
-  "playAgain": "Tekrar Oyna! 🔄",
+  "playAgain": "Tekrar Oyna!",
   "pieceHead": "Kafa",
   "pieceBody": "Gövde",
   "pieceTail": "Kuyruk",
@@ -94,5 +94,6 @@
   "wrongSoClose": "Çok yaklaştın! Devam et!",
   "wrongYouCanDoIt": "Başarabilirsin!",
   "wrongNotQuite": "Hmm, pek değil!",
-  "wrongAlmost": "Neredeyse! Tekrar dene!"
+  "wrongAlmost": "Neredeyse! Tekrar dene!",
+  "letsPlay": "Haydi Oynayalım!"
 }

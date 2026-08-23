@@ -215,10 +215,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get beatAllLevels => '🏆 You beat all levels!';
 
   @override
-  String get retry => '🔄 Retry';
+  String get retry => 'Retry';
 
   @override
-  String get menu => '🏠 Menu';
+  String get menu => 'Menu';
 
   @override
   String get pickAnimal => 'Pick an Animal! 🐾';
@@ -267,7 +267,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get playAgain => 'Play Again! 🔄';
+  String get playAgain => 'Play Again!';
 
   @override
   String get pieceHead => 'Head';
@@ -314,4 +314,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wrongAlmost => 'Almost! Try again!';
+
+  @override
+  String get letsPlay => 'Let\'s Play!';
 }

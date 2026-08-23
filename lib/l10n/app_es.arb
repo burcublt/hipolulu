@@ -63,8 +63,8 @@
   "matchedAllSummary": "¡Combinaste {pairs} parejas en {moves} movimientos!",
   "nextLevel": "🚀 {level} — ¡{cards} cartas!",
   "beatAllLevels": "🏆 ¡Superaste todos los niveles!",
-  "retry": "🔄 Reintentar",
-  "menu": "🏠 Menú",
+  "retry": "Reintentar",
+  "menu": "Menú",
   "pickAnimal": "¡Elige un animal! 🐾",
   "choosePuzzleBuddy": "Elige tu compañero de puzzle",
   "animalLion": "León",
@@ -79,7 +79,7 @@
   "dragPiecesAbove": "¡ARRASTRA LAS PIEZAS ARRIBA!",
   "youDidIt": "¡Lo lograste!",
   "puzzleComplete": "¡Puzzle de {animal} completo! 🌟",
-  "playAgain": "¡Jugar de nuevo! 🔄",
+  "playAgain": "¡Jugar de nuevo!",
   "pieceHead": "Cabeza",
   "pieceBody": "Cuerpo",
   "pieceTail": "Cola",
@@ -94,5 +94,6 @@
   "wrongSoClose": "¡Tan cerca! ¡Sigue así!",
   "wrongYouCanDoIt": "¡Tú puedes!",
   "wrongNotQuite": "¡Hmm, no del todo!",
-  "wrongAlmost": "¡Casi! ¡Inténtalo de nuevo!"
+  "wrongAlmost": "¡Casi! ¡Inténtalo de nuevo!",
+  "letsPlay": "¡Vamos a Jugar!"
 }
