@@ -227,10 +227,21 @@ class PuzzleArena extends StatefulWidget {
   final String imagePath;
   final VoidCallback onBack;
 
-  /// Called when the player taps "Diğer Oyuna Geç" on the win screen.
-  /// Optional for now — if you don't pass one, the button simply does
-  /// nothing (no crash). Wire it up later to your "go to next game" flow.
+  /// Called when the player taps "Diğer Oyuna Geç" on the win screen. If
+  /// you pass this explicitly it always wins. If you don't, but you *do*
+  /// pass [themeImages] + [currentIndex], PuzzleArena builds a sensible
+  /// default itself: replace this screen with a fresh PuzzleArena for the
+  /// next image in the same theme (wrapping back to the first after the
+  /// last one). If neither is supplied, the button simply does nothing.
   final VoidCallback? onNextGame;
+
+  /// All image paths for the current theme, in the same order shown on
+  /// PuzzleItemSelection — together with [currentIndex], this is what
+  /// lets "Diğer Oyuna Geç" figure out which puzzle comes next.
+  final List<String>? themeImages;
+
+  /// This puzzle's position within [themeImages].
+  final int? currentIndex;
 
   /// How many pieces the puzzle should have (6 / 8 / 12 map to a matching
   /// grid via _gridSizeForPieceCount; any other count falls back to a
@@ -242,6 +253,8 @@ class PuzzleArena extends StatefulWidget {
     required this.imagePath,
     required this.onBack,
     this.onNextGame,
+    this.themeImages,
+    this.currentIndex,
     this.pieceCount = 12,
   });
 
@@ -273,6 +286,42 @@ class _PuzzleArenaState extends State<PuzzleArena>
   late List<double> scatterRot; // resting tilt (radians), per piece index
   final GlobalKey _stackKey =
       GlobalKey(); // outer Stack — used to convert drop offsets to local coords
+
+  /// The callback actually wired to "Diğer Oyuna Geç": whatever the
+  /// caller passed explicitly, or — if they instead gave us the theme's
+  /// image list + our position in it — a default that replaces this
+  /// screen with a fresh PuzzleArena for the next image (wrapping back to
+  /// the first one after the last). Null (button does nothing) only if
+  /// neither was supplied.
+  VoidCallback? get _resolvedOnNextGame {
+    if (widget.onNextGame != null) return widget.onNextGame;
+    final images = widget.themeImages;
+    final index = widget.currentIndex;
+    if (images == null || images.isEmpty || index == null) return null;
+    return () {
+      final nextIndex = (index + 1) % images.length;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          // IMPORTANT: build a fresh onBack tied to *this* builder's own
+          // context (nextCtx), not widget.onBack. pushReplacement disposes
+          // the screen we're on right now, so anything the next screen's
+          // "Geri" button captured from *our* context would be pointing
+          // at an already-deactivated widget the moment it's pressed —
+          // exactly the "deactivated widget's ancestor" crash. Popping
+          // nextCtx instead lands in the same place (whatever was below
+          // us in the stack, e.g. PuzzleItemSelection) but stays safe no
+          // matter how many times we've chained through "Diğer Oyuna Geç".
+          builder: (nextCtx) => PuzzleArena(
+            imagePath: images[nextIndex],
+            onBack: () => Navigator.of(nextCtx).pop(),
+            pieceCount: widget.pieceCount,
+            themeImages: images,
+            currentIndex: nextIndex,
+          ),
+        ),
+      );
+    };
+  }
 
   @override
   void initState() {
@@ -786,7 +835,7 @@ class _PuzzleArenaState extends State<PuzzleArena>
               starCtrls: _starCtrls,
               onReset: _handleReset,
               onBack: widget.onBack,
-              onNextGame: widget.onNextGame ?? () {},
+              onNextGame: _resolvedOnNextGame ?? () {},
               placedCount: placed.length,
               totalCount: pieces.length,
             ),

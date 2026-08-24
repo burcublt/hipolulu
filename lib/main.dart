@@ -81,7 +81,8 @@ class CustomSplashScreen extends StatelessWidget {
       MaterialPageRoute(
         builder: (ctx) => MainMenu(
           onModeSelect: (modeId) async {
-            await SystemChrome.setPreferredOrientations(DeviceOrientation.values)
+            await SystemChrome.setPreferredOrientations(
+                    DeviceOrientation.values)
                 .catchError((_) {});
             if (modeId == 'puzzles') {
               await Navigator.of(ctx).push(
@@ -238,8 +239,10 @@ class _MainMenuState extends State<MainMenu> {
 
   @override
   Widget build(BuildContext context) {
-    _lockPortrait();
+    //_lockPortrait();
     final l10n = AppLocalizations.of(context)!;
+    final screenW = MediaQuery.of(context).size.width;
+    final isTablet = screenW > 600;
 
     return Scaffold(
       body: SceneBackground(
@@ -267,9 +270,9 @@ class _MainMenuState extends State<MainMenu> {
 
                 // ── GAME MODE GRID (in decorative frame) ──
                 Padding(
-                  padding: const EdgeInsets.symmetric(
+                  padding: EdgeInsets.symmetric(
                     horizontal: 24,
-                    vertical: 48,
+                    vertical: isTablet ? 100 : 48,
                   ),
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -278,11 +281,12 @@ class _MainMenuState extends State<MainMenu> {
                       Padding(
                         padding: const EdgeInsets.only(top: 16),
                         child: _GameFrame(
-                          child: _GameModeGrid(onModeSelect: widget.onModeSelect),
+                          child:
+                              _GameModeGrid(onModeSelect: widget.onModeSelect),
                         ),
                       ),
                       Positioned(
-                        top: -10,
+                        top: -15,
                         child: _SectionPill(label: l10n.chooseGame),
                       ),
                     ],
@@ -406,13 +410,14 @@ class _HeroStack extends StatelessWidget {
   Widget build(BuildContext context) {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
-
-    final logoWidth = isLandscape ? 800.0 : 500.0;
+    final screenW = MediaQuery.of(context).size.width;
+    final isTablet = screenW > 600;
+    final logoWidth = isTablet ? 1000.0 : 500.0;
     final logoHeight = logoWidth / 1.74;
-    final hippoWidth = isLandscape ? 200.0 : 225.0;
+    final hippoWidth = isTablet ? 600.0 : 225.0;
     final hippoHeight = hippoWidth / 0.945;
 
-    final stackHeight = isLandscape ? 250.0 : 235.0;
+    final stackHeight = isTablet ? 600.0 : 235.0;
 
     return SizedBox(
       width: double.infinity,
@@ -436,7 +441,7 @@ class _HeroStack extends StatelessWidget {
 
           // 2. Hippo Mascot
           Positioned(
-            top: isLandscape ? 120 : 130,
+            top: isTablet ? 280 : 130,
             child: SizedBox(
               width: hippoWidth,
               height: hippoHeight,
@@ -981,7 +986,11 @@ class _GameModeCardState extends State<_GameModeCard>
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                     child: Center(
                       child: FittedBox(
-                        fit: BoxFit.scaleDown,
+                        // `contain` (not `scaleDown`) so the icon/label
+                        // also scale *up* to fill a bigger card on a
+                        // tablet, instead of staying pinned to their
+                        // natural small size in the middle of empty space.
+                        fit: BoxFit.contain,
                         alignment: Alignment.center,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,

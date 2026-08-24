@@ -120,6 +120,8 @@ class _PuzzleItemSelectionState extends State<PuzzleItemSelection> {
                                             imagePath: path,
                                             onBack: () =>
                                                 Navigator.of(puzzleCtx).pop(),
+                                            themeImages: _imagePaths,
+                                            currentIndex: i,
                                           ),
                                         ),
                                       );
