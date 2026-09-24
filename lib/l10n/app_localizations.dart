@@ -115,7 +115,7 @@ abstract class AppLocalizations {
   /// No description provided for @chooseGame.
   ///
   /// In en, this message translates to:
-  /// **'Choose a Game!'**
+  /// **'🌟 Choose a Game! 🌟'**
   String get chooseGame;
 
   /// No description provided for @starsBadge.
@@ -297,6 +297,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Vegetables'**
   String get themeVegetables;
+
+  /// No description provided for @themeDinosaur.
+  ///
+  /// In en, this message translates to:
+  /// **'Dinosaur'**
+  String get themeDinosaur;
+
+  /// No description provided for @themeSpace.
+  ///
+  /// In en, this message translates to:
+  /// **'Space'**
+  String get themeSpace;
+
+  /// No description provided for @themeUnderwater.
+  ///
+  /// In en, this message translates to:
+  /// **'Underwater'**
+  String get themeUnderwater;
+
+  /// No description provided for @themeFarm.
+  ///
+  /// In en, this message translates to:
+  /// **'Farm'**
+  String get themeFarm;
+
+  /// No description provided for @themeAmusementPark.
+  ///
+  /// In en, this message translates to:
+  /// **'Amusement Park'**
+  String get themeAmusementPark;
+
+  /// No description provided for @themeHippolulu.
+  ///
+  /// In en, this message translates to:
+  /// **'HippoLulu'**
+  String get themeHippolulu;
 
   /// No description provided for @puzzlesCount.
   ///

@@ -96,11 +96,11 @@ class _PuzzleItemSelectionState extends State<PuzzleItemSelection> {
                             int crossAxisCount = constraints.maxWidth > 700
                                 ? 4
                                 : (constraints.maxWidth > 480 ? 3 : 2);
-                            double spacing = 14;
+                            double spacing = 16;
                             double itemWidth = (constraints.maxWidth -
                                     (spacing * (crossAxisCount - 1))) /
                                 crossAxisCount;
-                            double itemHeight = itemWidth * 1.15;
+                            double itemHeight = itemWidth * 1.18;
 
                             return Wrap(
                               spacing: spacing,
@@ -249,7 +249,7 @@ class _TitleSection extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-//  PUZZLE ITEM CARD (LARGE PREVIEW DESIGN)
+//  PUZZLE ITEM CARD
 // ─────────────────────────────────────────────
 class _PuzzleItemCard extends StatefulWidget {
   final String imagePath;
@@ -272,9 +272,6 @@ class _PuzzleItemCardState extends State<_PuzzleItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    const gradient = [Color(0xFF90D0FF), Color(0xFF3A9EE0)];
-    const shadow = Color(0xFF1A60B0);
-    final border = const Color(0xFF64BEFF).withValues(alpha: 0.6);
     final name = AppLocalizations.of(context)!.itemTitle(widget.imagePath);
 
     return GestureDetector(
@@ -301,17 +298,24 @@ class _PuzzleItemCardState extends State<_PuzzleItemCard> {
           duration: const Duration(milliseconds: 100),
           child: Container(
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: gradient,
-              ),
+              // Mockup: beyaz kart zemini
+              color: Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: border, width: 3),
+              // Mockup: kalın açık mavi dış kenarlık
+              border: Border.all(
+                color: const Color(0xFF90D0FF),
+                width: 3.5,
+              ),
               boxShadow: [
-                const BoxShadow(color: shadow, offset: Offset(0, 7)),
+                // Alt kenar 3D efekti
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
+                  color: const Color(0xFF5AAFE8).withValues(alpha: 0.9),
+                  offset: const Offset(0, 7),
+                  blurRadius: 0,
+                ),
+                // Genel yumuşak gölge
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
                   offset: const Offset(0, 10),
                   blurRadius: 20,
                 ),
@@ -320,74 +324,39 @@ class _PuzzleItemCardState extends State<_PuzzleItemCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Large Image Preview Container
+                // ── GÖRSEL ALANI ──
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.35),
-                          width: 1.5,
-                        ),
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(18),
+                        bottom: Radius.circular(6),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Hero(
-                          tag: widget.imagePath,
-                          child: Image.asset(
-                            widget.imagePath,
-                            fit: BoxFit.cover,
-                          ),
+                      child: Hero(
+                        tag: widget.imagePath,
+                        child: Image.asset(
+                          widget.imagePath,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
                   ),
                 ),
 
-                // Name & Play Icon
+                // ── ALT ŞERİT: İSİM ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 2, 12, 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontFamily: 'Baloo2 ExtraBold',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 17,
-                            color: Colors.white,
-                            shadows: [
-                              Shadow(
-                                color: Color(0x2E000000),
-                                offset: Offset(0, 2),
-                                blurRadius: 4,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.3),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow_rounded,
-                          size: 20,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Baloo2 ExtraBold',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
+                      color: Color(0xFF5C28A0),
+                    ),
                   ),
                 ),
               ],

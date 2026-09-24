@@ -85,6 +85,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
     - assets/images/
     - assets/splash/
+    - assets/cards/
     - assets/images/hippo.png
     - assets/images/splash.png
     - assets/images/matching/animals/
@@ -95,6 +96,7 @@ flutter:
     - assets/images/puzzles/animals/
     - assets/images/puzzles/fruits/
     - assets/images/puzzles/vehicles/
+    - assets/images/puzzle_theme/
     - assets/voices/animals/tr/
     - assets/voices/animals/en/
     - assets/voices/animals/es/
@@ -110,6 +112,9 @@ flutter:
     - assets/voices/foods/tr/
     - assets/voices/foods/en/
     - assets/voices/foods/es/
+    - assets/matching/background/
+    - assets/matching/ui/
+    - assets/matching/themes/
 
   fonts:
     - family: Baloo2

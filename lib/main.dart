@@ -6,10 +6,9 @@ import 'package:hippolulu/l10n/app_localizations.dart';
 import 'package:hippolulu/language_picker.dart';
 import 'package:hippolulu/locale_provider.dart';
 import 'level_selection.dart';
-import 'puzzle_item_selection.dart';
+import 'puzzle_theme_selections.dart';
 import 'matching_theme_select.dart';
 import 'matching_game.dart';
-import 'puzzle_arena.dart';
 import 'asset_service.dart';
 import 'splash_screen.dart';
 
@@ -69,9 +68,6 @@ class HippoLuluApp extends StatelessWidget {
 
 // ─────────────────────────────────────────────
 //  SPLASH SCREEN
-//  The actual animated sequence lives in splash_screen.dart (SplashScreen)
-//  — this just wires its completion callback to the same MainMenu routing
-//  the old timer-based splash used.
 // ─────────────────────────────────────────────
 class CustomSplashScreen extends StatelessWidget {
   const CustomSplashScreen({Key? key}) : super(key: key);
@@ -87,38 +83,13 @@ class CustomSplashScreen extends StatelessWidget {
             if (modeId == 'puzzles') {
               await Navigator.of(ctx).push(
                 MaterialPageRoute(
-                  builder: (navCtx) => LevelSelection(
-                    onBack: () => Navigator.of(navCtx).pop(),
-                    onSelect: (theme) {
-                      Navigator.of(navCtx).push(
-                        MaterialPageRoute(
-                          builder: (selectionCtx) => PuzzleItemSelection(
-                            themeId: theme.id,
-                            themeTitle: theme.label,
-                            onBack: () => Navigator.of(selectionCtx).pop(),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  builder: (navCtx) => const ThemeSelectionScreen(),
                 ),
               );
             } else if (modeId == 'matching') {
               await Navigator.of(ctx).push(
                 MaterialPageRoute(
-                  builder: (navCtx) => MatchingThemeSelect(
-                    onBack: () => Navigator.of(navCtx).pop(),
-                    onSelect: (theme) {
-                      Navigator.of(navCtx).push(
-                        MaterialPageRoute(
-                          builder: (gameCtx) => MatchingGame(
-                            theme: theme,
-                            onBack: () => Navigator.of(gameCtx).pop(),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  builder: (navCtx) => const MatchingThemeSelectionScreen(),
                 ),
               );
             }
@@ -141,6 +112,12 @@ class CustomSplashScreen extends StatelessWidget {
 // ─────────────────────────────────────────────
 //  GAME MODE DATA
 // ─────────────────────────────────────────────
+// How much bigger the "Bir Oyun Seç!" pill (and the spacing around it)
+// gets on a tablet vs. a phone. Shared by MainMenu (for positioning) and
+// _SectionPill (for its own size) so the two always stay in sync — change
+// this one number to make the pill bigger/smaller everywhere at once.
+const double kSectionPillTabletScale = 1.8;
+
 class GameMode {
   final String id;
   final String label;
@@ -151,6 +128,7 @@ class GameMode {
   final Color outline;
   final Color textColor;
   final bool locked;
+  final String cardAsset;
 
   GameMode({
     required this.id,
@@ -162,6 +140,7 @@ class GameMode {
     required this.outline,
     required this.textColor,
     required this.locked,
+    required this.cardAsset,
   });
 }
 
@@ -176,6 +155,7 @@ List<GameMode> gameModes(AppLocalizations l10n) => [
         outline: const Color(0xFFFFA500),
         textColor: const Color(0xFF5A3000),
         locked: false,
+        cardAsset: 'assets/cards/puzzle_card.webp',
       ),
       GameMode(
         id: 'matching',
@@ -187,6 +167,7 @@ List<GameMode> gameModes(AppLocalizations l10n) => [
         outline: const Color(0xFF22B820),
         textColor: const Color(0xFF0A2E00),
         locked: false,
+        cardAsset: 'assets/cards/matching_card.webp',
       ),
       GameMode(
         id: 'coloring',
@@ -198,6 +179,7 @@ List<GameMode> gameModes(AppLocalizations l10n) => [
         outline: const Color(0xFFFF4FA0),
         textColor: const Color(0xFF4A0030),
         locked: true,
+        cardAsset: 'assets/cards/coloring_card.webp',
       ),
       GameMode(
         id: 'counting',
@@ -209,6 +191,7 @@ List<GameMode> gameModes(AppLocalizations l10n) => [
         outline: const Color(0xFF0099FF),
         textColor: const Color(0xFF003060),
         locked: true,
+        cardAsset: 'assets/cards/number_card.webp',
       ),
     ];
 
@@ -239,10 +222,14 @@ class _MainMenuState extends State<MainMenu> {
 
   @override
   Widget build(BuildContext context) {
-    //_lockPortrait();
     final l10n = AppLocalizations.of(context)!;
     final screenW = MediaQuery.of(context).size.width;
     final isTablet = screenW > 600;
+    // Same scale _SectionPill computes internally for its own size — kept
+    // in sync here so the *positioning* around it (how far it pokes above
+    // the frame) grows together with the pill itself instead of staying
+    // a fixed phone-tuned offset.
+    final pillScale = isTablet ? kSectionPillTabletScale : 1.0;
 
     return Scaffold(
       body: SceneBackground(
@@ -253,7 +240,7 @@ class _MainMenuState extends State<MainMenu> {
               children: [
                 // ── TOP BAR ──
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
+                  padding: const EdgeInsets.fromLTRB(16, 3, 16, 2),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -271,22 +258,27 @@ class _MainMenuState extends State<MainMenu> {
                 // ── GAME MODE GRID (in decorative frame) ──
                 Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: isTablet ? 100 : 48,
+                    horizontal: isTablet ? 15 : 26,
+                    vertical: isTablet ? 20 : 18,
                   ),
                   child: Stack(
                     clipBehavior: Clip.none,
                     alignment: Alignment.topCenter,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.only(top: 16),
+                        // Scales with the same factor _SectionPill uses
+                        // for its own size — otherwise a much taller
+                        // tablet pill sinks further down into the frame
+                        // below it instead of just sitting proportionally
+                        // higher above it, like on phone.
+                        padding: EdgeInsets.only(top: 15 * pillScale),
                         child: _GameFrame(
                           child:
                               _GameModeGrid(onModeSelect: widget.onModeSelect),
                         ),
                       ),
                       Positioned(
-                        top: -15,
+                        top: -17 * pillScale,
                         child: _SectionPill(label: l10n.chooseGame),
                       ),
                     ],
@@ -397,7 +389,7 @@ class _SettingsButtonState extends State<_SettingsButton> {
 }
 
 // ─────────────────────────────────────────────
-//  HERO STACK (logo plaque + hippo + tagline ribbon + choose game pill)
+//  HERO STACK
 // ─────────────────────────────────────────────
 class _HeroStack extends StatelessWidget {
   final String tagline;
@@ -408,16 +400,14 @@ class _HeroStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
     final screenW = MediaQuery.of(context).size.width;
     final isTablet = screenW > 600;
-    final logoWidth = isTablet ? 1000.0 : 500.0;
+    final logoWidth = isTablet ? 1000.0 : 350.0;
     final logoHeight = logoWidth / 1.74;
-    final hippoWidth = isTablet ? 600.0 : 225.0;
+    final hippoWidth = isTablet ? 600.0 : 180.0;
     final hippoHeight = hippoWidth / 0.945;
 
-    final stackHeight = isTablet ? 600.0 : 235.0;
+    final stackHeight = isTablet ? 710.0 : 200.0;
 
     return SizedBox(
       width: double.infinity,
@@ -426,9 +416,8 @@ class _HeroStack extends StatelessWidget {
         alignment: Alignment.topCenter,
         clipBehavior: Clip.none,
         children: [
-          // 1. Logo Plaque (background of header)
           Positioned(
-            top: -30,
+            top: -35,
             child: SizedBox(
               width: logoWidth,
               height: logoHeight,
@@ -438,10 +427,8 @@ class _HeroStack extends StatelessWidget {
               ),
             ),
           ),
-
-          // 2. Hippo Mascot
           Positioned(
-            top: isTablet ? 280 : 130,
+            top: isTablet ? 280 : 80,
             child: SizedBox(
               width: hippoWidth,
               height: hippoHeight,
@@ -458,7 +445,7 @@ class _HeroStack extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-//  DASHED BORDER PAINTER (reused for plaque + game frame)
+//  DASHED BORDER PAINTER
 // ─────────────────────────────────────────────
 class _DashedBorderPainter extends CustomPainter {
   final Color color;
@@ -466,9 +453,6 @@ class _DashedBorderPainter extends CustomPainter {
   final double strokeWidth;
   final double dashWidth;
   final double dashGap;
-  // Extra gap between the dashed line and the outer edge of the widget
-  // it's painted on. 0 = dashes sit right on the edge. Increase this to
-  // push the dashed strip further inward, away from the frame's edge.
   final double inset;
 
   _DashedBorderPainter({
@@ -510,139 +494,6 @@ class _DashedBorderPainter extends CustomPainter {
 }
 
 // ─────────────────────────────────────────────
-//  TAGLINE RIBBON (real ribbon.png asset + text overlay)
-// ─────────────────────────────────────────────
-class _TaglineRibbon extends StatelessWidget {
-  final String tagline;
-
-  const _TaglineRibbon({required this.tagline});
-
-  @override
-  Widget build(BuildContext context) {
-    const width = 210.0;
-    const height = width / 3.79;
-
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Image.asset(
-            'assets/images/ribbon.png',
-            fit: BoxFit.fill,
-          ),
-          CustomPaint(
-            size: const Size(width, height),
-            painter: _CurvedTextPainter(
-              text: tagline,
-              textStyle: const TextStyle(
-                fontFamily: 'Baloo2 ExtraBold',
-                fontSize: 13.5,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.1,
-                shadows: [
-                  Shadow(
-                    color: Color(0x88000000),
-                    offset: Offset(0, 1),
-                    blurRadius: 2,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CurvedTextPainter extends CustomPainter {
-  final String text;
-  final TextStyle textStyle;
-
-  _CurvedTextPainter({
-    required this.text,
-    required this.textStyle,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cleanText = text.replaceAll(RegExp(r'^[✨⭐\s]+'), '').trim();
-    if (cleanText.isEmpty) return;
-
-    const startX = 22.0;
-    final endX = size.width - 22.0;
-    final startY = size.height * 0.58;
-    final endY = size.height * 0.58;
-    final controlX = size.width / 2;
-    final controlY = size.height * 0.28;
-
-    final path = Path()
-      ..moveTo(startX, startY)
-      ..quadraticBezierTo(controlX, controlY, endX, endY);
-
-    final metrics = path.computeMetrics().toList();
-    if (metrics.isEmpty) return;
-    final metric = metrics.first;
-    final pathLength = metric.length;
-
-    final refPainter = TextPainter(
-      text: TextSpan(text: 'X', style: textStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    final baseHeight = refPainter.height;
-
-    final graphemes = cleanText.characters.toList();
-
-    final charPainters = <TextPainter>[];
-    double totalWidth = 0;
-    for (final charStr in graphemes) {
-      final tp = TextPainter(
-        text: TextSpan(text: charStr, style: textStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      charPainters.add(tp);
-      totalWidth += tp.width;
-    }
-
-    if (totalWidth == 0) return;
-
-    double currentOffset = (pathLength - totalWidth) / 2;
-
-    for (int i = 0; i < graphemes.length; i++) {
-      final tp = charPainters[i];
-      final charWidth = tp.width;
-
-      if (charWidth == 0) {
-        currentOffset += charWidth;
-        continue;
-      }
-
-      final charCenterOffset =
-          (currentOffset + charWidth / 2).clamp(0.0, pathLength);
-      final tangent = metric.getTangentForOffset(charCenterOffset);
-
-      if (tangent != null) {
-        canvas.save();
-        canvas.translate(tangent.position.dx, tangent.position.dy);
-        canvas.rotate(tangent.angle);
-        tp.paint(canvas, Offset(-charWidth / 2, -baseHeight * 0.50));
-        canvas.restore();
-      }
-
-      currentOffset += charWidth;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _CurvedTextPainter oldDelegate) {
-    return oldDelegate.text != text || oldDelegate.textStyle != textStyle;
-  }
-}
-
-// ─────────────────────────────────────────────
 //  SECTION PILL ("🎮 Bir Oyun Seç!")
 // ─────────────────────────────────────────────
 class _SectionPill extends StatelessWidget {
@@ -652,39 +503,44 @@ class _SectionPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The CustomPaint now wraps the whole decorated Container (background +
-    // padding + text), so it sizes itself to the full pill instead of just
-    // the text — the dashed border is painted right on the pill's true
-    // outer edge instead of hugging tightly around the label.
+    // Same isTablet pattern the rest of this screen (_HeroStack, the game
+    // card panel) already uses — this pill just wasn't wired up to it
+    // before, so it stayed phone-sized even on a tablet while everything
+    // around it scaled up.
+    final screenW = MediaQuery.of(context).size.width;
+    final isTablet = screenW > 600;
+    final scale = isTablet ? kSectionPillTabletScale : 1.0;
+
     return CustomPaint(
       foregroundPainter: _DashedBorderPainter(
         color: const Color(0xFFFFC94D),
         radius: 999,
-        strokeWidth: 2,
-        dashWidth: 6,
-        dashGap: 4,
-        inset: 4, // 👈 kesikli şerit ile pill'in kenarı arasındaki boşluk (px)
+        strokeWidth: 1 * scale,
+        dashWidth: 4 * scale,
+        dashGap: 4 * scale,
+        inset: 4 * scale,
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding:
+            EdgeInsets.symmetric(horizontal: 20 * scale, vertical: 8 * scale),
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 255, 237, 194),
+          color: const Color.fromARGB(255, 253, 241, 217),
           borderRadius: BorderRadius.circular(999),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF643CC8).withValues(alpha: 0.15),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+              blurRadius: 10 * scale,
+              offset: Offset(0, 3 * scale),
             ),
           ],
         ),
         child: Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Baloo2 ExtraBold',
             fontWeight: FontWeight.bold,
-            fontSize: 22,
-            color: Color(0xFF5C28A0),
+            fontSize: 18 * scale,
+            color: const Color(0xFF5C28A0),
           ),
         ),
       ),
@@ -693,7 +549,7 @@ class _SectionPill extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-//  GAME FRAME (dashed, light-bulb bordered panel around the grid)
+//  GAME FRAME (updated for 3D cream border)
 // ─────────────────────────────────────────────
 class _GameFrame extends StatelessWidget {
   final Widget child;
@@ -703,96 +559,29 @@ class _GameFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        color: const Color(0xFFFDF1D9),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(
+          color: const Color(0xFFFBE4C5),
+          width: 6,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: const Color(0xFF8C531B).withValues(alpha: 0.18),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      // The red border + light-bulb ring is painted at the true outer
-      // edge of this widget now, so there's no cream margin outside it
-      // and the bulbs sit right on the visible edge (like the reference).
-      child: CustomPaint(
-        foregroundPainter: _LightBulbBorderPainter(),
-        child: Container(
-          // Matches the strokeW (9) in _LightBulbBorderPainter exactly,
-          // so the warm fill butts right up against the red band with
-          // no transparent gap showing through in between.
-          margin: const EdgeInsets.all(9),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            // Warmer amusement-park cream/tan instead of near-white.
-            color: const Color.fromARGB(255, 247, 199, 169),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: child,
-        ),
-      ),
+      child: child,
     );
   }
-}
-
-class _LightBulbBorderPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    const strokeW = 9.0;
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(strokeW / 2, strokeW / 2, size.width - strokeW,
-          size.height - strokeW),
-      const Radius.circular(22),
-    );
-
-    // Thick red arcade frame border
-    canvas.drawRRect(
-      rrect,
-      Paint()
-        ..color = const Color.fromARGB(255, 240, 96, 94)
-        ..strokeWidth = strokeW
-        ..style = PaintingStyle.stroke,
-    );
-
-    // Yellow glowing bulbs around the frame
-    final path = Path()..addRRect(rrect);
-    for (final metric in path.computeMetrics()) {
-      const spacing = 15.0;
-      double distance = spacing / 2;
-      while (distance < metric.length) {
-        final tangent = metric.getTangentForOffset(distance);
-        if (tangent != null) {
-          canvas.drawCircle(
-            tangent.position,
-            4.5,
-            Paint()..color = const Color(0xFFFFEB3B),
-          );
-          canvas.drawCircle(
-            tangent.position,
-            3.0,
-            Paint()..color = const Color(0xFFFFFDE7),
-          );
-          canvas.drawCircle(
-            tangent.position,
-            4.5,
-            Paint()
-              ..color = const Color(0xFFFF9800)
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 0.8,
-          );
-        }
-        distance += spacing;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _LightBulbBorderPainter oldDelegate) => false;
 }
 
 // ─────────────────────────────────────────────
-//  GAME MODE GRID
+//  GAME MODE GRID (Görsel 2 Tasarımına Uygun)
 // ─────────────────────────────────────────────
 class _GameModeGrid extends StatelessWidget {
   final void Function(String) onModeSelect;
@@ -806,25 +595,30 @@ class _GameModeGrid extends StatelessWidget {
         MediaQuery.of(context).orientation == Orientation.landscape;
 
     int crossAxisCount = (screenW > 600 || isLandscape) ? 4 : 2;
+
+    // Görsel 2'deki kart yüksekliği ve dikey orana ulaşmak için aspect ratio 0.58 olarak güncellendi.
     double childAspectRatio =
-        isLandscape ? 1.05 : ((screenW > 600) ? 0.76 : 0.88);
+        (screenW > 600) ? 0.65 : (isLandscape ? 1.05 : 0.71);
 
     return Align(
       alignment: Alignment.topCenter,
-      child: GridView.count(
-        shrinkWrap: true,
-        crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
-        childAspectRatio: childAspectRatio,
-        physics: const NeverScrollableScrollPhysics(),
-        children: List.generate(modes.length, (i) {
-          return _GameModeCard(
-            mode: modes[i],
-            index: i,
-            onTap: modes[i].locked ? null : () => onModeSelect(modes[i].id),
-          );
-        }),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
+        child: GridView.count(
+          shrinkWrap: true,
+          crossAxisCount: crossAxisCount,
+          //crossAxisSpacing: 2, // Kartlar arasındaki yatay boşluk azaltıldı
+          //mainAxisSpacing: 2, // Kartlar arasındaki dikey boşluk azaltıldı
+          childAspectRatio: childAspectRatio,
+          physics: const NeverScrollableScrollPhysics(),
+          children: List.generate(modes.length, (i) {
+            return _GameModeCard(
+              mode: modes[i],
+              index: i,
+              onTap: modes[i].locked ? null : () => onModeSelect(modes[i].id),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -848,64 +642,13 @@ class _GameModeCard extends StatefulWidget {
   State<_GameModeCard> createState() => _GameModeCardState();
 }
 
-class _GameModeCardState extends State<_GameModeCard>
-    with TickerProviderStateMixin {
-  late AnimationController _pressCtrl;
-  late AnimationController _emojiCtrl;
-  late AnimationController _pulseCtrl;
-  late AnimationController _ribbonCtrl;
-
+class _GameModeCardState extends State<_GameModeCard> {
   double _pressScale = 1.0;
   double _pressY = 0.0;
 
   @override
-  void initState() {
-    super.initState();
-
-    _emojiCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    if (!widget.mode.locked) {
-      Timer(
-        Duration(milliseconds: (2000 + widget.index * 700)),
-        () {
-          if (mounted) {
-            _emojiCtrl.repeat(
-                period: const Duration(milliseconds: 1200 + 2000));
-          }
-        },
-      );
-    }
-
-    _pulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
-
-    _ribbonCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    );
-
-    _pressCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 100));
-  }
-
-  @override
-  void dispose() {
-    _pressCtrl.dispose();
-    _emojiCtrl.dispose();
-    _pulseCtrl.dispose();
-    _ribbonCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final mode = widget.mode;
-    final cardBg = mode.bg;
-    final cardShadow = mode.shadow;
 
     return GestureDetector(
       onTapDown: (_) {
@@ -933,343 +676,75 @@ class _GameModeCardState extends State<_GameModeCard>
         child: AnimatedSlide(
           offset: Offset(0, _pressY / 200),
           duration: const Duration(milliseconds: 100),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.65),
-                width: 3.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: cardShadow,
-                  offset: const Offset(0, 6),
-                  blurRadius: 0,
-                ),
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  offset: const Offset(0, 8),
-                  blurRadius: 16,
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: Stack(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Glare
+                  Positioned.fill(
+                    child: Image.asset(
+                      mode.cardAsset,
+                      fit: BoxFit.fill,
+                    ),
+                  ),
                   Positioned(
-                    top: 0,
                     left: 0,
                     right: 0,
-                    child: Container(
-                      height: 60,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.white.withValues(alpha: 0.40),
-                            Colors.white.withValues(alpha: 0),
-                          ],
+                    top: constraints.maxHeight * 0.55,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          mode.label,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontFamily: 'Baloo2 ExtraBold',
+                            fontWeight: FontWeight.bold,
+                            fontSize: constraints.maxWidth * 0.100,
+                            color: mode.textColor,
+                            letterSpacing: 0.5,
+                          ),
                         ),
-                      ),
+                        SizedBox(height: constraints.maxHeight * 0.003),
+                        Text(
+                          mode.sublabel,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontFamily: 'Baloo2 ExtraBold',
+                            fontSize: constraints.maxWidth * 0.075,
+                            fontWeight: FontWeight.w500,
+                            color: mode.textColor.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-
-                  // Content
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                    child: Center(
-                      child: FittedBox(
-                        // `contain` (not `scaleDown`) so the icon/label
-                        // also scale *up* to fill a bigger card on a
-                        // tablet, instead of staying pinned to their
-                        // natural small size in the middle of empty space.
-                        fit: BoxFit.contain,
-                        alignment: Alignment.center,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _EmojiCircle(
-                              emoji: mode.emoji,
-                              locked: mode.locked,
-                              controller: _emojiCtrl,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              mode.label,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Baloo2 ExtraBold',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: mode.textColor,
-                                letterSpacing: 0.3,
-                                shadows: const [
-                                  Shadow(
-                                    color: Colors.black12,
-                                    offset: Offset(0, 1),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              mode.sublabel,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Baloo2 ExtraBold',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: mode.textColor.withValues(alpha: 0.85),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (mode.locked)
-                              _LockBadge(
-                                label: AppLocalizations.of(context)!.locked,
-                              )
-                            else
-                              _PlayArrowCircle(arrowColor: mode.shadow),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  //if (mode.locked)
+                  // Positioned(
+                  //   left: constraints.maxWidth * 0.36,
+                  //   right: constraints.maxWidth * 0.09,
+                  //   top: constraints.maxHeight * 0.725,
+                  //   bottom: constraints.maxHeight * 0.175,
+                  //   child: Align(
+                  //     alignment: Alignment.centerLeft,
+                  //     child: Text(
+                  //       AppLocalizations.of(context)!.locked,
+                  //       textAlign: TextAlign.left,
+                  //       maxLines: 1,
+                  //       style: TextStyle(
+                  //         fontFamily: 'Baloo2 ExtraBold',
+                  //         fontWeight: FontWeight.bold,
+                  //         fontSize: constraints.maxWidth * 0.085,
+                  //         color: const Color(0xFF7854B8),
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                 ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmojiCircle extends StatelessWidget {
-  final String emoji;
-  final bool locked;
-  final AnimationController controller;
-
-  const _EmojiCircle({
-    required this.emoji,
-    required this.locked,
-    required this.controller,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    Widget circle = Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        color: locked
-            ? Colors.white.withValues(alpha: 0.3)
-            : Colors.white.withValues(alpha: 0.38),
-        shape: BoxShape.circle,
-        boxShadow: locked
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-      ),
-      child: Center(
-        child: Text(emoji, style: const TextStyle(fontSize: 34)),
-      ),
-    );
-
-    if (locked) return circle;
-
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, child) {
-        // Keyframe: rotate [-12, 12, -6, 6, 0], scale [1, 1.15, 1.15, 1.05, 1]
-        final t = controller.value;
-        final angle = _lerpKeyframes(t, [0, -12, 12, -6, 6, 0]) * pi / 180;
-        final scale = _lerpKeyframes(t, [1, 1.15, 1.15, 1.05, 1]);
-        return Transform.scale(
-          scale: scale,
-          child: Transform.rotate(angle: angle, child: child),
-        );
-      },
-      child: circle,
-    );
-  }
-
-  double _lerpKeyframes(double t, List<double> frames) {
-    if (frames.length < 2) return frames.first;
-    final segments = frames.length - 1;
-    final scaledT = t * segments;
-    final i = scaledT.floor().clamp(0, segments - 1);
-    final frac = scaledT - i;
-    return frames[i] + (frames[i + 1] - frames[i]) * frac;
-  }
-}
-
-class _LockBadge extends StatelessWidget {
-  final String label;
-
-  const _LockBadge({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.lock_rounded, size: 13, color: Color(0xFF5C28A0)),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontFamily: 'Baloo2 ExtraBold',
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              color: Color(0xFF5C28A0),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlayArrowCircle extends StatelessWidget {
-  final Color arrowColor;
-
-  const _PlayArrowCircle({required this.arrowColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            offset: const Offset(0, 3),
-            blurRadius: 4,
-          ),
-        ],
-      ),
-      child: Center(
-        child: Icon(
-          Icons.keyboard_arrow_right_rounded,
-          size: 28,
-          color: arrowColor,
-        ),
-      ),
-    );
-  }
-}
-
-class _PlayBadge extends StatelessWidget {
-  final String label;
-  final Color textColor;
-  final AnimationController controller;
-
-  const _PlayBadge({
-    required this.label,
-    required this.textColor,
-    required this.controller,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, child) {
-        final scale = 1.0 + 0.12 * controller.value;
-        return Transform.scale(scale: scale, child: child);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Baloo2 ExtraBold',
-            fontSize: 12,
-            color: textColor,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NewRibbon extends StatelessWidget {
-  final String label;
-  final AnimationController controller;
-
-  const _NewRibbon({required this.label, required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, child) {
-        final angle = (-4 + 8 * controller.value) * pi / 180;
-        final dy = -controller.value;
-        return Transform.translate(
-          offset: Offset(0, dy),
-          child: Transform.rotate(angle: angle, child: child),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFF4444), Color(0xFFDD0000)],
-          ),
-          borderRadius: BorderRadius.circular(999),
-          border:
-              Border.all(color: Colors.white.withValues(alpha: 0.7), width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFC80000).withValues(alpha: 0.4),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'Baloo2 ExtraBold',
-            fontWeight: FontWeight.bold,
-            fontSize: 11,
-            color: Colors.white,
+              );
+            },
           ),
         ),
       ),
@@ -1278,74 +753,7 @@ class _NewRibbon extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-//  COMING SOON FOOTER
-// ─────────────────────────────────────────────
-class _ComingSoonFooter extends StatefulWidget {
-  final String text;
-
-  const _ComingSoonFooter({required this.text});
-
-  @override
-  State<_ComingSoonFooter> createState() => _ComingSoonFooterState();
-}
-
-class _ComingSoonFooterState extends State<_ComingSoonFooter>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2500),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (_, child) => Opacity(
-        opacity: 0.6 + 0.4 * _ctrl.value,
-        child: child,
-      ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFF7C3AED),
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Text(
-          '🚀  ${widget.text}',
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontFamily: 'Baloo2 ExtraBold',
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────
-//  SCENE BACKGROUND (aynı önceki versiyondan)
+//  SCENE BACKGROUND
 // ─────────────────────────────────────────────
 class SceneBackground extends StatelessWidget {
   final Widget child;
@@ -1359,7 +767,6 @@ class SceneBackground extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Circus / ferris-wheel park background image
           Image.asset(
             'assets/images/background.png',
             fit: BoxFit.cover,
@@ -1369,287 +776,4 @@ class SceneBackground extends StatelessWidget {
       ),
     );
   }
-}
-
-class _SkyPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final sx = size.width / 390;
-    final sy = size.height / 320;
-
-    canvas.drawCircle(Offset(352 * sx, 52 * sy), 38 * sx,
-        Paint()..color = const Color(0xFFFFE566).withValues(alpha: 0.9));
-    canvas.drawCircle(Offset(352 * sx, 52 * sy), 30 * sx,
-        Paint()..color = const Color(0xFFFFD93D));
-
-    final rayPaint = Paint()
-      ..color = const Color(0xFFFFC300).withValues(alpha: 0.8)
-      ..strokeWidth = 5 * sx
-      ..strokeCap = StrokeCap.round;
-    for (final deg in [0, 40, 80, 120, 160, 200, 240, 280, 320]) {
-      final rad = deg * pi / 180;
-      canvas.drawLine(
-        Offset(352 * sx + cos(rad) * 42 * sx, 52 * sy + sin(rad) * 42 * sy),
-        Offset(352 * sx + cos(rad) * 56 * sx, 52 * sy + sin(rad) * 56 * sy),
-        rayPaint,
-      );
-    }
-
-    void drawCloud(double cx, double cy, double sc, double op) {
-      final p = Paint()..color = Colors.white.withValues(alpha: op);
-      void e(double ex, double ey, double rx, double ry) {
-        canvas.drawOval(
-          Rect.fromCenter(
-            center: Offset((cx + ex) * sx, (cy + ey) * sy),
-            width: rx * 2 * sx * sc,
-            height: ry * 2 * sy * sc,
-          ),
-          p,
-        );
-      }
-
-      e(0, 10, 34, 26);
-      e(32, 2, 38, 30);
-      e(70, 8, 30, 24);
-      e(100, 14, 26, 20);
-      e(52, 18, 54, 18);
-    }
-
-    drawCloud(-10, 40, 0.85, 0.95);
-    drawCloud(200, 18, 0.70, 0.90);
-    drawCloud(90, 100, 0.60, 0.80);
-    drawCloud(270, 110, 0.55, 0.75);
-    drawCloud(-20, 160, 0.50, 0.65);
-    drawCloud(300, 190, 0.45, 0.60);
-  }
-
-  @override
-  bool shouldRepaint(_SkyPainter o) => false;
-}
-
-class _HillsPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final sx = size.width / 390;
-    final sy = size.height / 200;
-    void e(double cx, double cy, double rx, double ry, Color c) {
-      canvas.drawOval(
-        Rect.fromCenter(
-            center: Offset(cx * sx, cy * sy),
-            width: rx * 2 * sx,
-            height: ry * 2 * sy),
-        Paint()..color = c,
-      );
-    }
-
-    e(320, 170, 280, 120, const Color(0xFF6ABF62));
-    e(80, 180, 260, 115, const Color(0xFF78CC70));
-    e(230, 190, 300, 110, const Color(0xFF8AD880));
-    canvas.drawRect(Rect.fromLTWH(0, 155 * sy, size.width, 45 * sy),
-        Paint()..color = const Color(0xFF8AD880));
-
-    final colors = [
-      const Color(0xFFFFD93D),
-      const Color(0xFFFF9F7F),
-      const Color(0xFFF48FB1),
-      const Color(0xFFA8D85C)
-    ];
-    final xs = [22.0, 68, 118, 175, 235, 295, 348];
-    for (int i = 0; i < xs.length; i++) {
-      final x = xs[i] * sx;
-      final y = (138 + (i % 3) * 6) * sy;
-      canvas.drawCircle(Offset(x, y), 6 * sx, Paint()..color = colors[i % 4]);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromCenter(
-                center: Offset(x, y + 7 * sy), width: 3 * sx, height: 10 * sy),
-            const Radius.circular(2)),
-        Paint()..color = const Color(0xFF5AAA50),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_HillsPainter o) => false;
-}
-
-// ─────────────────────────────────────────────
-//  HIPPO MASCOT (SVG → CustomPainter)
-// ─────────────────────────────────────────────
-class HippoMascot extends StatelessWidget {
-  const HippoMascot({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) =>
-      CustomPaint(painter: _HippoPainter(), size: const Size(190, 190));
-}
-
-class _HippoPainter extends CustomPainter {
-  // Scale from original 260x300 viewBox to 190x190
-  static double _ox = 260, _oy = 300;
-  static double _tw = 190, _th = 190;
-
-  Offset _p(double x, double y) => Offset(x / _ox * _tw, y / _oy * _th);
-  double _sx(double v) => v / _ox * _tw;
-  double _sy(double v) => v / _oy * _th;
-
-  void _oval(Canvas c, double cx, double cy, double rx, double ry, Color color,
-      {double opacity = 1.0}) {
-    c.drawOval(
-      Rect.fromCenter(
-          center: _p(cx, cy), width: _sx(rx * 2), height: _sy(ry * 2)),
-      Paint()..color = color.withValues(alpha: opacity),
-    );
-  }
-
-  void _rrect(
-      Canvas c, double x, double y, double w, double h, double r, Color color) {
-    c.drawRRect(
-      RRect.fromRectAndRadius(
-          Rect.fromLTWH(_p(x, y).dx, _p(x, y).dy, _sx(w), _sy(h)),
-          Radius.circular(r / _ox * _tw)),
-      Paint()..color = color,
-    );
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawOval(
-        Rect.fromCenter(center: _p(130, 294), width: _sx(170), height: _sy(18)),
-        Paint()..color = const Color(0xFF501EA0).withValues(alpha: 0.14));
-
-    _rrect(canvas, 42, 170, 176, 118, 55, const Color(0xFF8C5CC8));
-    _oval(canvas, 130, 218, 60, 44, const Color(0xFFA878DE));
-
-    _rrect(canvas, 52, 252, 52, 46, 26, const Color(0xFF7A4AB8));
-    _rrect(canvas, 155, 252, 52, 46, 26, const Color(0xFF7A4AB8));
-    for (final d in [
-      [56.0, 292.0],
-      [68.0, 296.0],
-      [80.0, 296.0],
-      [92.0, 292.0],
-      [159.0, 292.0],
-      [171.0, 296.0],
-      [183.0, 296.0],
-      [195.0, 292.0],
-    ]) {
-      _oval(canvas, d[0], d[1], 8, 8, const Color(0xFF6C3CA8));
-    }
-
-    canvas.save();
-    canvas.translate(_p(34, 200).dx, _p(34, 200).dy);
-    canvas.rotate(-20 * pi / 180);
-    _oval(canvas, 0, 0, 20, 32, const Color(0xFF8C5CC8));
-    canvas.restore();
-    _oval(canvas, 20, 226, 18, 14, const Color(0xFF9A6CD4));
-
-    canvas.save();
-    canvas.translate(_p(218, 188).dx, _p(218, 188).dy);
-    canvas.rotate(40 * pi / 180);
-    _oval(canvas, 0, 0, 18, 32, const Color(0xFF8C5CC8));
-    canvas.restore();
-    canvas.save();
-    canvas.translate(_p(234, 158).dx, _p(234, 158).dy);
-    canvas.rotate(20 * pi / 180);
-    _oval(canvas, 0, 0, 15, 28, const Color(0xFF9A6CD4));
-    canvas.restore();
-    _oval(canvas, 240, 132, 17, 17, const Color(0xFFA878DE));
-    for (final d in [
-      [254.0, 120.0, 11.0],
-      [257.0, 136.0, 11.0],
-      [249.0, 149.0, 10.0],
-      [226.0, 122.0, 10.0]
-    ]) {
-      _oval(canvas, d[0], d[1], d[2], d[2], const Color(0xFFB088E4));
-    }
-
-    _rrect(canvas, 88, 158, 82, 32, 16, const Color(0xFF9A6CD4));
-    _oval(canvas, 130, 112, 80, 75, const Color(0xFFB088E4));
-    _oval(canvas, 58, 66, 30, 27, const Color(0xFF9A6CD4));
-    _oval(canvas, 58, 66, 17, 16, const Color(0xFFF08CB8));
-    _oval(canvas, 202, 66, 30, 27, const Color(0xFF9A6CD4));
-    _oval(canvas, 202, 66, 17, 16, const Color(0xFFF08CB8));
-    _oval(canvas, 130, 112, 76, 71, const Color(0xFFB088E4));
-
-    _oval(canvas, 130, 143, 50, 33, const Color(0xFFCAAFF0));
-    _oval(canvas, 130, 136, 36, 16, const Color(0xFFD8BEF7), opacity: 0.6);
-    _oval(canvas, 112, 141, 11, 8, const Color(0xFF7A4AB8));
-    _oval(canvas, 148, 141, 11, 8, const Color(0xFF7A4AB8));
-    canvas.drawCircle(_p(109, 138), _sx(3),
-        Paint()..color = Colors.white.withValues(alpha: 0.35));
-    canvas.drawCircle(_p(145, 138), _sx(3),
-        Paint()..color = Colors.white.withValues(alpha: 0.35));
-
-    final sp = Paint()
-      ..color = const Color(0xFF7A4AB8)
-      ..strokeWidth = _sx(4)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(
-        Path()
-          ..moveTo(_p(96, 158).dx, _p(96, 158).dy)
-          ..quadraticBezierTo(_p(130, 180).dx, _p(130, 180).dy, _p(164, 158).dx,
-              _p(164, 158).dy),
-        sp);
-    _rrect(canvas, 116, 158, 13, 10, 4, Colors.white);
-    _rrect(canvas, 131, 158, 13, 10, 4, Colors.white);
-
-    _oval(canvas, 96, 98, 22, 22, Colors.white);
-    _oval(canvas, 164, 98, 22, 22, Colors.white);
-    _oval(canvas, 99, 98, 14, 14, const Color(0xFF4A28A0));
-    _oval(canvas, 167, 98, 14, 14, const Color(0xFF4A28A0));
-    _oval(canvas, 100, 98, 8, 8, const Color(0xFF150840));
-    _oval(canvas, 168, 98, 8, 8, const Color(0xFF150840));
-    canvas.drawCircle(_p(104, 91), _sx(5), Paint()..color = Colors.white);
-    canvas.drawCircle(_p(172, 91), _sx(5), Paint()..color = Colors.white);
-    canvas.drawCircle(_p(95, 103), _sx(2.5),
-        Paint()..color = Colors.white.withValues(alpha: 0.7));
-    canvas.drawCircle(_p(163, 103), _sx(2.5),
-        Paint()..color = Colors.white.withValues(alpha: 0.7));
-
-    _oval(canvas, 72, 124, 18, 12, const Color(0xFFF060A0), opacity: 0.38);
-    _oval(canvas, 188, 124, 18, 12, const Color(0xFFF060A0), opacity: 0.38);
-
-    canvas.drawPath(
-        Path()
-          ..moveTo(_p(78, 80).dx, _p(78, 80).dy)
-          ..quadraticBezierTo(
-              _p(96, 72).dx, _p(96, 72).dy, _p(112, 78).dx, _p(112, 78).dy),
-        sp);
-    canvas.drawPath(
-        Path()
-          ..moveTo(_p(148, 78).dx, _p(148, 78).dy)
-          ..quadraticBezierTo(
-              _p(164, 72).dx, _p(164, 72).dy, _p(182, 80).dx, _p(182, 80).dy),
-        sp);
-
-    void star(double tx, double ty, double rot, double r, Color color) {
-      canvas.save();
-      canvas.translate(_p(tx, ty).dx, _p(tx, ty).dy);
-      canvas.rotate(rot * pi / 180);
-      final path = Path();
-      for (int i = 0; i < 10; i++) {
-        final a = (i * 36 - 90) * pi / 180;
-        final rad = i.isEven ? r : r * 0.45;
-        final pt = Offset(cos(a) * _sx(rad), sin(a) * _sy(rad));
-        i == 0 ? path.moveTo(pt.dx, pt.dy) : path.lineTo(pt.dx, pt.dy);
-      }
-      path.close();
-      canvas.drawPath(path, Paint()..color = color);
-      canvas.restore();
-    }
-
-    star(18, 42, 15, 10, const Color(0xFFFFD93D));
-    star(234, 54, -10, 8, const Color(0xFFFFD93D));
-    canvas.drawCircle(_p(30, 95), _sx(4),
-        Paint()..color = const Color(0xFFFFD93D).withValues(alpha: 0.9));
-    canvas.drawCircle(_p(24, 85), _sx(2.5),
-        Paint()..color = const Color(0xFFFFD93D).withValues(alpha: 0.7));
-    canvas.drawCircle(_p(228, 100), _sx(4),
-        Paint()..color = const Color(0xFFFF9DE2).withValues(alpha: 0.9));
-    canvas.drawCircle(_p(235, 90), _sx(2.5),
-        Paint()..color = const Color(0xFFFF9DE2).withValues(alpha: 0.7));
-  }
-
-  @override
-  bool shouldRepaint(_HippoPainter o) => false;
 }

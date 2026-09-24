@@ -1,140 +1,28 @@
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:hippolulu/l10n/app_localizations.dart';
-import 'asset_service.dart';
 
-// ─────────────────────────────────────────────
-//  MATCHING THEME TYPE
-// ─────────────────────────────────────────────
-enum MatchingTheme {
-  animals,
-  vehicles,
-  objects,
-  fruitsAndVegetables,
-  fruits,
-  vegetables,
-  foods,
-}
-
-// ── Yanlış eşleşme motivasyon mesajları ──
-class _WrongMsg {
-  final String emoji;
-  final String Function(AppLocalizations l10n) getText;
-  const _WrongMsg(this.emoji, this.getText);
-}
-
-final List<_WrongMsg> kWrongMessages = [
-  _WrongMsg('🙈', (l10n) => l10n.wrongTryAgain),
-  _WrongMsg('🌟', (l10n) => l10n.wrongSoClose),
-  _WrongMsg('💪', (l10n) => l10n.wrongYouCanDoIt),
-  _WrongMsg('🤔', (l10n) => l10n.wrongNotQuite),
-  _WrongMsg('😄', (l10n) => l10n.wrongAlmost),
-];
-
-// ─────────────────────────────────────────────
-//  CONTENT DATA
-// ─────────────────────────────────────────────
-const Map<MatchingTheme, List<String>> kThemeEmojis = {
-  MatchingTheme.objects: [
-    '🍎',
-    '⭐',
-    '🎈',
-    '⚽',
-    '🎸',
-    '🌸',
-    '🍦',
-    '🎀',
-    '🌈',
-    '🎁'
-  ],
-};
-
-class _ThemeColors {
-  final Color card, cardShadow, matched;
-  final List<Color> cardBack;
-  const _ThemeColors(
-      {required this.card,
-      required this.cardShadow,
-      required this.matched,
-      required this.cardBack});
-}
-
-const Map<MatchingTheme, _ThemeColors> kThemeColors = {
-  MatchingTheme.animals: _ThemeColors(
-      card: Color(0xFFFFF7E0),
-      cardShadow: Color(0xFFC05000),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFFFF9940), Color(0xFFFFCE7A)]),
-  MatchingTheme.fruits: _ThemeColors(
-      card: Color(0xFFFFF7E0),
-      cardShadow: Color(0xFFC05000),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFFFF9940), Color(0xFFFFCE7A)]),
-  MatchingTheme.vegetables: _ThemeColors(
-      card: Color(0xFFFFF7E0),
-      cardShadow: Color(0xFFC05000),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFFFF9940), Color(0xFFFFCE7A)]),
-  MatchingTheme.fruitsAndVegetables: _ThemeColors(
-      card: Color(0xFFFFF7E0),
-      cardShadow: Color(0xFFC05000),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFFFF9940), Color(0xFFFFCE7A)]),
-  MatchingTheme.vehicles: _ThemeColors(
-      card: Color(0xFFE8F5FF),
-      cardShadow: Color(0xFF1A60B0),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFF3A9EE0), Color(0xFF90D0FF)]),
-  MatchingTheme.foods: _ThemeColors(
-      card: Color(0xFFE8F5FF),
-      cardShadow: Color(0xFF1A60B0),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFF3A9EE0), Color(0xFF90D0FF)]),
-  MatchingTheme.objects: _ThemeColors(
-      card: Color(0xFFF5EEFF),
-      cardShadow: Color(0xFF6040B8),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFF9E78D8), Color(0xFFD4B8F8)]),
-};
-
-// ─────────────────────────────────────────────
-//  LEVEL DEFINITIONS
-// ─────────────────────────────────────────────
-class _Level {
-  final int pairs, previewSeconds, number;
-  const _Level({
-    required this.pairs,
-    required this.previewSeconds,
-    required this.number,
-  });
-}
-
-const List<_Level> kLevels = [
-  _Level(pairs: 5, previewSeconds: 10, number: 1),
-  _Level(pairs: 6, previewSeconds: 12, number: 2),
-  _Level(pairs: 8, previewSeconds: 14, number: 3),
-  _Level(pairs: 10, previewSeconds: 16, number: 4),
-];
-
-// ─────────────────────────────────────────────
-//  CARD STATE
-// ─────────────────────────────────────────────
-class CardState {
-  final String id, pairId, emoji;
-  const CardState(
-      {required this.id, required this.pairId, required this.emoji});
-}
+// ============================================================================
+// ASSETS
+// ============================================================================
 
 class _MatchingGameAssets {
   const _MatchingGameAssets._();
 
   static const String backgroundPortrait =
-      'assets/matching/background/matching_background_portrait.webp';
+      'assets/matching/background/matching_game_background_portrait.webp';
 
   static const String backgroundLandscape =
-      'assets/matching/background/matching_background_landscape.webp';
+      'assets/matching/background/matching_game_background_landscape.webp';
+
+  static const String parrot = 'assets/matching/animals/parrot.webp';
+
+  static const String fox = 'assets/matching/animals/fox.webp';
+
+  static const String cat = 'assets/matching/animals/cat.webp';
+
+  static const String cow = 'assets/matching/animals/cow.webp';
 
   static const String frog = 'assets/matching/animals/frog.webp';
 }
@@ -143,209 +31,312 @@ class _MatchingGameAssets {
 // CARD MODEL
 // ============================================================================
 
-enum Phase { preview, playing, won }
+class MatchingCardData {
+  final String id;
+  final String imagePath;
 
-// ─────────────────────────────────────────────
-//  HELPERS
-// ─────────────────────────────────────────────
-List<CardState> buildCards(MatchingTheme theme, int pairs) {
-  List<String> pool;
-  if (theme == MatchingTheme.objects) {
-    pool = List.from(kThemeEmojis[MatchingTheme.objects]!);
-  } else {
-    final images = AssetService().getMatchingImages(theme.name);
-    if (images.isNotEmpty) {
-      pool = List.from(images);
-    } else {
-      pool = List.from(kThemeEmojis[theme] ?? []);
-    }
-  }
+  bool isFaceUp;
+  bool isMatched;
 
-  pool.shuffle(Random());
-  final selected = pool.take(pairs).toList();
-  final cards = <CardState>[];
-  for (int i = 0; i < selected.length; i++) {
-    cards.add(CardState(id: '$i-a', pairId: '$i', emoji: selected[i]));
-    cards.add(CardState(id: '$i-b', pairId: '$i', emoji: selected[i]));
-  }
-  cards.shuffle(Random());
-  return cards;
+  MatchingCardData({
+    required this.id,
+    required this.imagePath,
+    this.isFaceUp = true,
+    this.isMatched = false,
+  });
 }
 
-int calcStars(int moves, int pairs) {
-  final ratio = moves / pairs;
-  if (ratio <= 1.4) return 3;
-  if (ratio <= 2.0) return 2;
-  return 1;
-}
+// ============================================================================
+// SCREEN
+// ============================================================================
 
-// ─────────────────────────────────────────────
-//  MATCHING GAME
-// ─────────────────────────────────────────────
-class MatchingGame extends StatefulWidget {
-  final MatchingTheme theme;
-  final VoidCallback onBack;
+class MatchingGameScreen extends StatefulWidget {
+  final String themeId;
 
-  const MatchingGame({super.key, required this.theme, required this.onBack});
+  const MatchingGameScreen({
+    super.key,
+    this.themeId = 'animals',
+  });
 
   @override
-  State<MatchingGame> createState() => _MatchingGameState();
+  State<MatchingGameScreen> createState() => _MatchingGameScreenState();
 }
 
-class _MatchingGameState extends State<MatchingGame>
-    with TickerProviderStateMixin {
-  int _levelIdx = 0;
-  List<CardState> _cards = [];
-  Phase _phase = Phase.preview;
-  int _countdown = 0;
-  final List<String> _selected = [];
-  final Set<String> _matched = {};
-  bool _disabled = false;
-  bool _showWrongToast = false;
-  int _lives = 5;
-  bool _showWin = false;
-  Timer? _checkTimer;
-  Timer? _countdownTimer;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+class _MatchingGameScreenState extends State<MatchingGameScreen> {
+  // ==========================================================================
+  // GAME SETTINGS
+  // ==========================================================================
+
+  static const int _memorizeSeconds = 8;
+
+  int _secondsLeft = _memorizeSeconds;
+
+  int _matchedPairs = 0;
+
+  int _level = 1;
+
+  bool _memorizing = true;
+
+  bool _checkingPair = false;
+
+  Timer? _timer;
+
+  MatchingCardData? _firstSelected;
+  MatchingCardData? _secondSelected;
+
+  late List<MatchingCardData> _cards;
+
+  // ==========================================================================
+  // INIT
+  // ==========================================================================
 
   @override
   void initState() {
     super.initState();
-    _startLevel(0);
-    _initGame();
+
+    _createCards();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startMemorizeTimer();
+    });
   }
 
-  void _initGame() async {
-    await AssetService().load();
-    if (mounted) {
-      setState(() {
-        _cards = buildCards(widget.theme,
-            kLevels[_levelIdx.clamp(0, kLevels.length - 1)].pairs);
-      });
-    }
-  }
+  // ==========================================================================
+  // DISPOSE
+  // ==========================================================================
 
   @override
   void dispose() {
-    _checkTimer?.cancel();
-    _countdownTimer?.cancel();
-    _audioPlayer.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 
-  _Level get _level => kLevels[_levelIdx.clamp(0, kLevels.length - 1)];
+  // ==========================================================================
+  // CREATE CARDS
+  // ==========================================================================
 
-  void _startLevel(int idx) {
-    _checkTimer?.cancel();
-    _countdownTimer?.cancel();
-    setState(() {
-      _levelIdx = idx;
-      _cards = buildCards(
-          widget.theme, kLevels[idx.clamp(0, kLevels.length - 1)].pairs);
-      _phase = Phase.preview;
-      _countdown = kLevels[idx.clamp(0, kLevels.length - 1)].previewSeconds;
-      _selected.clear();
-      _matched.clear();
-      _disabled = false;
-      _lives = 5;
-      _showWin = false;
-      _showWrongToast = false;
-    });
-    _startCountdown();
-  }
+  void _createCards() {
+    final items = <Map<String, String>>[
+      {
+        'id': 'parrot',
+        'image': _MatchingGameAssets.parrot,
+      },
+      {
+        'id': 'fox',
+        'image': _MatchingGameAssets.fox,
+      },
+      {
+        'id': 'cat',
+        'image': _MatchingGameAssets.cat,
+      },
+      {
+        'id': 'cow',
+        'image': _MatchingGameAssets.cow,
+      },
+      {
+        'id': 'frog',
+        'image': _MatchingGameAssets.frog,
+      },
+    ];
 
-  void _startCountdown() {
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) {
-        t.cancel();
-        return;
+    _cards = [];
+
+    for (final item in items) {
+      // Her item'dan 2 tane oluşturuyoruz.
+      for (int i = 0; i < 2; i++) {
+        _cards.add(
+          MatchingCardData(
+            id: item['id']!,
+            imagePath: item['image']!,
+            isFaceUp: true,
+          ),
+        );
       }
-      setState(() {
-        _countdown--;
-        if (_countdown <= 0) {
-          t.cancel();
-          _phase = Phase.playing;
-        }
-      });
-    });
+    }
+
+    _cards.shuffle(Random());
   }
 
-  void _handleCardTap(String id) {
-    if (_disabled || _phase != Phase.playing) return;
-    if (_selected.contains(id) || _selected.length >= 2) return;
+  // ==========================================================================
+  // MEMORIZE TIMER
+  // ==========================================================================
 
-    setState(() => _selected.add(id));
+  void _startMemorizeTimer() {
+    _timer?.cancel();
 
-    if (_selected.length == 2) {
-      setState(() {
-        _disabled = true;
-      });
-      final a = _cards.firstWhere((c) => c.id == _selected[0]);
-      final b = _cards.firstWhere((c) => c.id == _selected[1]);
+    _secondsLeft = _memorizeSeconds;
 
-      if (a.pairId == b.pairId) {
-        setState(() => _matched.add(a.pairId));
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (timer) {
+        if (!mounted) return;
 
-        // Dinamik ses çalma
-        final langCode = Localizations.localeOf(context).languageCode;
-        final themeFolder = widget.theme.name;
-        final itemName = a.emoji.split('/').last.split('.').first;
-        final soundPath = 'voices/$themeFolder/$langCode/$itemName.mp3';
-
-        _audioPlayer.play(AssetSource(soundPath)).catchError((e) {
-          debugPrint('Audio file not found: $soundPath');
-        });
-
-        if (_matched.length == _level.pairs) {
-          Future.delayed(const Duration(milliseconds: 600), () {
-            if (mounted) setState(() => _showWin = true);
+        if (_secondsLeft > 1) {
+          setState(() {
+            _secondsLeft--;
           });
-        }
-        _checkTimer = Timer(const Duration(milliseconds: 500), () {
-          if (mounted)
-            setState(() {
-              _selected.clear();
-              _disabled = false;
-              _showWrongToast = false;
-            });
-        });
-      } else {
-                setState(() {
-          _showWrongToast = true;
-          _lives--;
-        });
-        if (_lives <= 0) {
-          Future.delayed(const Duration(milliseconds: 900), () {
-            if (mounted) {
-              _startLevel(_levelIdx); // restart on game over
+        } else {
+          timer.cancel();
+
+          setState(() {
+            _secondsLeft = 0;
+            _memorizing = false;
+
+            for (final card in _cards) {
+              card.isFaceUp = false;
             }
           });
         }
-        _checkTimer = Timer(const Duration(milliseconds: 900), () {
-          if (mounted)
-            setState(() {
-              _selected.clear();
-              _disabled = false;
-              _showWrongToast = false;
-            });
-        });
+      },
+    );
+  }
+
+  // ==========================================================================
+  // CARD TAP
+  // ==========================================================================
+
+  void _onCardTap(
+    MatchingCardData card,
+  ) {
+    if (_memorizing) return;
+    if (_checkingPair) return;
+    if (card.isMatched) return;
+    if (card.isFaceUp) return;
+
+    setState(() {
+      card.isFaceUp = true;
+    });
+
+    if (_firstSelected == null) {
+      _firstSelected = card;
+      return;
+    }
+
+    _secondSelected = card;
+
+    _checkPair();
+  }
+
+  // ==========================================================================
+  // CHECK PAIR
+  // ==========================================================================
+
+  Future<void> _checkPair() async {
+    if (_firstSelected == null || _secondSelected == null) {
+      return;
+    }
+
+    _checkingPair = true;
+
+    final first = _firstSelected!;
+    final second = _secondSelected!;
+
+    if (first.id == second.id) {
+      await Future.delayed(
+        const Duration(milliseconds: 350),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        first.isMatched = true;
+        second.isMatched = true;
+
+        _matchedPairs++;
+
+        _firstSelected = null;
+        _secondSelected = null;
+
+        _checkingPair = false;
+      });
+
+      if (_matchedPairs == _cards.length ~/ 2) {
+        _onLevelCompleted();
       }
+    } else {
+      await Future.delayed(
+        const Duration(milliseconds: 800),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        first.isFaceUp = false;
+        second.isFaceUp = false;
+
+        _firstSelected = null;
+        _secondSelected = null;
+
+        _checkingPair = false;
+      });
     }
   }
 
-  bool _isFaceUp(CardState card) =>
-      _phase == Phase.preview ||
-      _matched.contains(card.pairId) ||
-      _selected.contains(card.id);
+  // ==========================================================================
+  // LEVEL COMPLETE
+  // ==========================================================================
+
+  void _onLevelCompleted() {
+    Future.delayed(
+      const Duration(milliseconds: 500),
+      () {
+        if (!mounted) return;
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            return _WinDialog(
+              onReplay: () {
+                Navigator.pop(context);
+                _restartGame();
+              },
+              onContinue: () {
+                Navigator.pop(context);
+
+                setState(() {
+                  _level++;
+                });
+
+                _restartGame();
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ==========================================================================
+  // RESTART
+  // ==========================================================================
+
+  void _restartGame() {
+    _timer?.cancel();
+
+    setState(() {
+      _matchedPairs = 0;
+      _secondsLeft = _memorizeSeconds;
+      _memorizing = true;
+      _checkingPair = false;
+
+      _firstSelected = null;
+      _secondSelected = null;
+
+      _createCards();
+    });
+
+    _startMemorizeTimer();
+  }
+
+  // ==========================================================================
+  // BUILD
+  // ==========================================================================
 
   @override
   Widget build(BuildContext context) {
-    final stars = calcStars(0, _level.pairs);
     return Scaffold(
-      body: Stack(
-        children: [
-          LayoutBuilder(
-
+      body: LayoutBuilder(
         builder: (
           BuildContext context,
           BoxConstraints constraints,
@@ -401,20 +392,8 @@ class _MatchingGameState extends State<MatchingGame>
           );
         },
       ),
-      if (_showWin)
-        _WinOverlay(
-          level: _level,
-          levelIdx: _levelIdx,
-          moves: 0,
-          stars: stars,
-          onNextLevel: () => _startLevel(_levelIdx + 1),
-          onRetry: () => _startLevel(_levelIdx),
-          onBack: widget.onBack,
-        ),
-    ],
-    ),
-  );
-}
+    );
+  }
 
   // ==========================================================================
   // PORTRAIT
@@ -442,10 +421,9 @@ class _MatchingGameState extends State<MatchingGame>
             0,
           ),
           child: _TopBar(
-            level: _level.number,
-            matchedPairs: _matched.length,
-            lives: _lives,
-            totalPairs: _level.pairs,
+            level: _level,
+            matchedPairs: _matchedPairs,
+            totalPairs: _cards.length ~/ 2,
           ),
         ),
 
@@ -462,9 +440,9 @@ class _MatchingGameState extends State<MatchingGame>
             horizontal: horizontalPadding,
           ),
           child: _GameStatusPanel(
-            memorizing: (_phase == Phase.preview),
-            secondsLeft: _countdown,
-            totalSeconds: _level.previewSeconds,
+            memorizing: _memorizing,
+            secondsLeft: _secondsLeft,
+            totalSeconds: _memorizeSeconds,
             compact: false,
           ),
         ),
@@ -487,9 +465,7 @@ class _MatchingGameState extends State<MatchingGame>
             ),
             child: _GameGrid(
               cards: _cards,
-              onCardTap: (card) => _handleCardTap(card.id),
-              isFaceUp: _isFaceUp,
-              isMatched: (card) => _matched.contains(card.pairId),
+              onCardTap: _onCardTap,
               isLandscape: false,
               isTablet: isTablet,
             ),
@@ -501,7 +477,7 @@ class _MatchingGameState extends State<MatchingGame>
         // --------------------------------------------------------------------
 
         _BottomHint(
-          memorizing: (_phase == Phase.preview),
+          memorizing: _memorizing,
         ),
 
         SizedBox(
@@ -537,20 +513,20 @@ class _MatchingGameState extends State<MatchingGame>
               const SizedBox(width: 16),
               Expanded(
                 child: _GameStatusPanel(
-                  memorizing: (_phase == Phase.preview),
-                  secondsLeft: _countdown,
-                  totalSeconds: _level.previewSeconds,
+                  memorizing: _memorizing,
+                  secondsLeft: _secondsLeft,
+                  totalSeconds: _memorizeSeconds,
                   compact: true,
                 ),
               ),
               const SizedBox(width: 16),
               _LevelBadge(
-                level: _level.number,
+                level: _level,
               ),
               const SizedBox(width: 8),
               _PairsBadge(
-                current: _matched.length,
-                total: _level.pairs,
+                current: _matchedPairs,
+                total: _cards.length ~/ 2,
               ),
             ],
           ),
@@ -565,9 +541,7 @@ class _MatchingGameState extends State<MatchingGame>
             ),
             child: _GameGrid(
               cards: _cards,
-              onCardTap: (card) => _handleCardTap(card.id),
-              isFaceUp: _isFaceUp,
-              isMatched: (card) => _matched.contains(card.pairId),
+              onCardTap: _onCardTap,
               isLandscape: true,
               isTablet: width >= 900,
             ),
@@ -575,7 +549,7 @@ class _MatchingGameState extends State<MatchingGame>
         ),
 
         _BottomHint(
-          memorizing: (_phase == Phase.preview),
+          memorizing: _memorizing,
         ),
 
         const SizedBox(height: 8),
@@ -591,13 +565,11 @@ class _MatchingGameState extends State<MatchingGame>
 class _TopBar extends StatelessWidget {
   final int level;
   final int matchedPairs;
-  final int lives;
   final int totalPairs;
 
   const _TopBar({
     required this.level,
     required this.matchedPairs,
-    required this.lives,
     required this.totalPairs,
   });
 
@@ -612,8 +584,8 @@ class _TopBar extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         _PairsBadge(
-          current: lives,
-          total: 5,
+          current: matchedPairs,
+          total: totalPairs,
         ),
       ],
     );
@@ -972,21 +944,18 @@ class _CountdownCircle extends StatelessWidget {
 // ============================================================================
 
 class _GameGrid extends StatelessWidget {
-  final List<CardState> cards;
+  final List<MatchingCardData> cards;
 
-  final void Function(CardState card) onCardTap;
-  final bool Function(CardState card) isFaceUp;
-  final bool Function(CardState card) isMatched;
+  final void Function(
+    MatchingCardData card,
+  ) onCardTap;
 
   final bool isLandscape;
   final bool isTablet;
 
   const _GameGrid({
-    super.key,
     required this.cards,
     required this.onCardTap,
-    required this.isFaceUp,
-    required this.isMatched,
     required this.isLandscape,
     required this.isTablet,
   });
@@ -1042,8 +1011,6 @@ class _GameGrid extends StatelessWidget {
 
                 return _MemoryCard(
                   card: card,
-                  faceUp: isFaceUp(card),
-                  matched: isMatched(card),
                   onTap: () => onCardTap(card),
                 );
               },
@@ -1080,16 +1047,11 @@ class _GameGrid extends StatelessWidget {
 // ============================================================================
 
 class _MemoryCard extends StatelessWidget {
-  final CardState card;
-  final bool faceUp;
-  final bool matched;
+  final MatchingCardData card;
   final VoidCallback onTap;
 
   const _MemoryCard({
-    super.key,
     required this.card,
-    required this.faceUp,
-    required this.matched,
     required this.onTap,
   });
 
@@ -1101,14 +1063,14 @@ class _MemoryCard extends StatelessWidget {
         duration: const Duration(
           milliseconds: 220,
         ),
-        scale: matched ? 0.96 : 1,
+        scale: card.isMatched ? 0.96 : 1,
         child: AnimatedContainer(
           duration: const Duration(
             milliseconds: 280,
           ),
           curve: Curves.easeOutBack,
           decoration: BoxDecoration(
-            gradient: faceUp
+            gradient: card.isFaceUp
                 ? const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -1142,7 +1104,7 @@ class _MemoryCard extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: faceUp
+                color: card.isFaceUp
                     ? const Color(
                         0xFFE0C47C,
                       ).withValues(
@@ -1175,7 +1137,7 @@ class _MemoryCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(
               20,
             ),
-            child: faceUp ? _buildFront() : _buildBack(),
+            child: card.isFaceUp ? _buildFront() : _buildBack(),
           ),
         ),
       ),
@@ -1192,17 +1154,11 @@ class _MemoryCard extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          card.emoji.endsWith('.webp') || card.emoji.endsWith('.png')
-              ? Image.asset(
-                  card.emoji.startsWith('assets/')
-                      ? card.emoji
-                      : (card.emoji.startsWith('matching/')
-                          ? 'assets/images/${card.emoji}'
-                          : 'assets/images/matching/${card.emoji}'),
-                  fit: BoxFit.contain,
-                )
-              : Text(card.emoji, style: const TextStyle(fontSize: 40)),
-          if (matched)
+          Image.asset(
+            card.imagePath,
+            fit: BoxFit.contain,
+          ),
+          if (card.isMatched)
             Positioned(
               top: 2,
               right: 2,
@@ -1342,354 +1298,85 @@ class _BottomHint extends StatelessWidget {
 // TEMPORARY WIN DIALOG
 // ============================================================================
 
-class _WinOverlay extends StatefulWidget {
-  final _Level level;
-  final int levelIdx, moves, stars;
-  final VoidCallback onNextLevel, onRetry, onBack;
+class _WinDialog extends StatelessWidget {
+  final VoidCallback onReplay;
+  final VoidCallback onContinue;
 
-  const _WinOverlay({
-    required this.level,
-    required this.levelIdx,
-    required this.moves,
-    required this.stars,
-    required this.onNextLevel,
-    required this.onRetry,
-    required this.onBack,
+  const _WinDialog({
+    required this.onReplay,
+    required this.onContinue,
   });
 
   @override
-  State<_WinOverlay> createState() => _WinOverlayState();
-}
-
-class _WinOverlayState extends State<_WinOverlay>
-    with TickerProviderStateMixin {
-  late AnimationController _celebCtrl, _entryCtrl;
-  late List<AnimationController> _starCtrls;
-
-  @override
-  void initState() {
-    super.initState();
-    _entryCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500))
-      ..forward();
-    _celebCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500))
-      ..repeat(reverse: true);
-    _starCtrls = List.generate(3, (i) {
-      final c = AnimationController(
-          vsync: this, duration: const Duration(milliseconds: 400));
-      Future.delayed(Duration(milliseconds: 350 + i * 150), () {
-        if (mounted) c.forward();
-      });
-      return c;
-    });
-  }
-
-  @override
-  void dispose() {
-    _celebCtrl.dispose();
-    _entryCtrl.dispose();
-    for (final c in _starCtrls) c.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final levelLabel = l10n.levelLabel(widget.level.number);
-    final nextLevel = widget.levelIdx < kLevels.length - 1
-        ? kLevels[widget.levelIdx + 1]
-        : null;
-
-    return FadeTransition(
-      opacity: _entryCtrl,
+    return Dialog(
+      backgroundColor: Colors.transparent,
       child: Container(
-        color: const Color(0xFF64BE3C).withValues(alpha: 0.93),
-        child: Center(
-          child: ScaleTransition(
-            scale:
-                CurvedAnimation(parent: _entryCtrl, curve: Curves.elasticOut),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 🎉 celebrate
-                  AnimatedBuilder(
-                    animation: _celebCtrl,
-                    builder: (_, child) => Transform.scale(
-                      scale: 1.0 + 0.15 * _celebCtrl.value,
-                      child: Transform.rotate(
-                        angle: (-10 + 20 * _celebCtrl.value) * pi / 180,
-                        child: child,
-                      ),
-                    ),
-                    child: const Text('🎉', style: TextStyle(fontSize: 72)),
-                  ),
-                  const SizedBox(height: 12),
-
-                  Text(l10n.levelDone(levelLabel),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'Baloo2 ExtraBold',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 42,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(color: Color(0x1F000000), offset: Offset(0, 4))
-                        ],
-                      )),
-
-                  const SizedBox(height: 4),
-                  Text(l10n.matchedAllSummary(widget.level.pairs, widget.moves),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontFamily: 'Baloo2 ExtraBold',
-                          fontSize: 17,
-                          color: Colors.white)),
-
-                  const SizedBox(height: 12),
-
-                  // Stars
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                        3,
-                        (i) => Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 5),
-                              child: ScaleTransition(
-                                scale: CurvedAnimation(
-                                    parent: _starCtrls[i],
-                                    curve: Curves.elasticOut),
-                                child: Icon(Icons.star_rounded,
-                                    size: 44,
-                                    color: i < widget.stars
-                                        ? const Color(0xFFFFD93D)
-                                        : Colors.white.withValues(alpha: 0.3)),
-                              ),
-                            )),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Next Level button
-                  if (nextLevel != null)
-                    _WinButton(
-                      label: l10n.nextLevel(
-                        l10n.levelLabel(nextLevel.number),
-                        nextLevel.pairs * 2,
-                      ),
-                      primary: true,
-                      onTap: widget.onNextLevel,
-                    ),
-                  if (widget.levelIdx >= kLevels.length - 1)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Text(l10n.beatAllLevels,
-                          style: const TextStyle(
-                              fontFamily: 'Baloo2 ExtraBold',
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: Colors.white)),
-                    ),
-
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                          child: _WinButton(
-                              label: l10n.retry,
-                              primary: false,
-                              onTap: widget.onRetry)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                          child: _WinButton(
-                              label: l10n.menu,
-                              primary: false,
-                              onTap: widget.onBack)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+        constraints: const BoxConstraints(
+          maxWidth: 420,
         ),
-      ),
-    );
-  }
-}
-
-class _WinButton extends StatefulWidget {
-  final String label;
-  final bool primary;
-  final VoidCallback onTap;
-  const _WinButton(
-      {required this.label, required this.primary, required this.onTap});
-  @override
-  State<_WinButton> createState() => _WinButtonState();
-}
-
-class _WinButtonState extends State<_WinButton> {
-  double _scale = 1.0;
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _scale = 0.93),
-      onTapUp: (_) {
-        setState(() => _scale = 1.0);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _scale = 1.0),
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            vertical: widget.primary ? 16 : 13,
-            horizontal: widget.primary ? 32 : 0,
-          ),
-          decoration: BoxDecoration(
-            gradient: widget.primary
-                ? const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xFFFFE857), Color(0xFFFFC300)])
-                : null,
-            color: widget.primary ? null : Colors.white.withValues(alpha: 0.28),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-                color: Colors.white.withValues(alpha: 0.5),
-                width: widget.primary ? 3 : 2.5),
-            boxShadow: widget.primary
-                ? const [
-                    BoxShadow(color: Color(0xFFC49000), offset: Offset(0, 6)),
-                    BoxShadow(
-                        color: Color(0x4DC49000),
-                        offset: Offset(0, 10),
-                        blurRadius: 20)
-                  ]
-                : null,
-          ),
-          child: Text(widget.label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Baloo2 ExtraBold',
-                fontWeight: FontWeight.bold,
-                fontSize: widget.primary ? 22 : 16,
-                color: widget.primary ? const Color(0xFF4A2800) : Colors.white,
-              )),
-        ),
-      ),
-    );
-  }
-}
-
-class _WrongToast extends StatefulWidget {
-  final bool show;
-  const _WrongToast({Key? key, required this.show}) : super(key: key);
-  @override
-  State<_WrongToast> createState() => _WrongToastState();
-}
-
-class _WrongToastState extends State<_WrongToast>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _scale, _opacity;
-  late Animation<Offset> _slide;
-  _WrongMsg _msg = kWrongMessages[0];
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400));
-    _ctrl.addListener(() => setState(() {}));
-    _scale = Tween(begin: 0.4, end: 1.0)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
-    _opacity = Tween(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
-    _slide = Tween(begin: const Offset(0, 0.15), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
-  }
-
-  @override
-  void didUpdateWidget(_WrongToast old) {
-    super.didUpdateWidget(old);
-    if (widget.show && !old.show) {
-      setState(
-          () => _msg = kWrongMessages[Random().nextInt(kWrongMessages.length)]);
-      _ctrl.forward(from: 0);
-    }
-    if (!widget.show && old.show) {
-      _ctrl.reverse();
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (_, child) {
-        if (_ctrl.value == 0) return const SizedBox.shrink();
-        return Opacity(
-          opacity: _opacity.value,
-          child: SlideTransition(
-            position: _slide,
-            child: ScaleTransition(scale: _scale, child: child),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFF0C0), Color(0xFFFFE08A)],
+          color: const Color(
+            0xFFFFFCED,
           ),
-          borderRadius: BorderRadius.circular(999),
-          border:
-              Border.all(color: const Color(0xFFFFFFFF).withValues(alpha: 0.8), width: 3),
-          boxShadow: const [
-            BoxShadow(color: Color(0xFFD4A000), offset: Offset(0, 6)),
-            BoxShadow(
-                color: Color(0x4DC8A000),
-                offset: Offset(0, 10),
-                blurRadius: 28),
-          ],
+          borderRadius: BorderRadius.circular(
+            30,
+          ),
+          border: Border.all(
+            color: const Color(
+              0xFFFFC43D,
+            ),
+            width: 3,
+          ),
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 500),
-              builder: (_, t, child) {
-                final angle = sin(t * pi * 4) * 15 * (1 - t) * pi / 180;
-                final scale = 1.0 + sin(t * pi) * 0.3;
-                return Transform.scale(
-                  scale: scale,
-                  child: Transform.rotate(angle: angle, child: child),
-                );
-              },
-              child: Text(_msg.emoji, style: const TextStyle(fontSize: 30)),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              _msg.getText(AppLocalizations.of(context)!),
-              style: const TextStyle(
-                fontFamily: 'Baloo2 ExtraBold',
-                fontWeight: FontWeight.bold,
-                fontSize: 17,
-                color: Color(0xFF7A4800),
+            const Text(
+              '🎉',
+              style: TextStyle(
+                fontSize: 58,
               ),
+            ),
+            const SizedBox(
+              height: 8,
+            ),
+            const Text(
+              'Great job!',
+              style: TextStyle(
+                color: Color(
+                  0xFF6127C9,
+                ),
+                fontWeight: FontWeight.w900,
+                fontSize: 28,
+              ),
+            ),
+            const SizedBox(
+              height: 20,
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onReplay,
+                    child: const Text(
+                      'Replay',
+                    ),
+                  ),
+                ),
+                const SizedBox(
+                  width: 12,
+                ),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: onContinue,
+                    child: const Text(
+                      'Continue',
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

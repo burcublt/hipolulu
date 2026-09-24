@@ -15,7 +15,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tagline => 'Discover • Play • Learn';
 
   @override
-  String get chooseGame => 'Choose a Game!';
+  String get chooseGame => '🌟 Choose a Game! 🌟';
 
   @override
   String get starsBadge => '3 Stars!';
@@ -106,6 +106,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get themeVegetables => 'Vegetables';
+
+  @override
+  String get themeDinosaur => 'Dinosaur';
+
+  @override
+  String get themeSpace => 'Space';
+
+  @override
+  String get themeUnderwater => 'Underwater';
+
+  @override
+  String get themeFarm => 'Farm';
+
+  @override
+  String get themeAmusementPark => 'Amusement Park';
+
+  @override
+  String get themeHippolulu => 'HippoLulu';
 
   @override
   String puzzlesCount(int count) {

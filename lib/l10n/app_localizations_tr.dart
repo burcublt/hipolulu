@@ -15,7 +15,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tagline => 'Keşfet • Oyna • Öğren';
 
   @override
-  String get chooseGame => 'Bir Oyun Seç!';
+  String get chooseGame => '🌟 Bir Oyun Seç! 🌟';
 
   @override
   String get starsBadge => '3 Yıldız!';
@@ -106,6 +106,24 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get themeVegetables => 'Sebzeler';
+
+  @override
+  String get themeDinosaur => 'Dinazorlar';
+
+  @override
+  String get themeSpace => 'Uzay';
+
+  @override
+  String get themeUnderwater => 'Deniz Altı';
+
+  @override
+  String get themeFarm => 'Çiftlik';
+
+  @override
+  String get themeAmusementPark => 'Lunapark';
+
+  @override
+  String get themeHippolulu => 'HippoLulu';
 
   @override
   String puzzlesCount(int count) {

@@ -8,7 +8,7 @@
   "@tagline": {
     "description": "Subtitle under the app name"
   },
-  "chooseGame": "Choose a Game!",
+  "chooseGame": "🌟 Choose a Game! 🌟",
   "starsBadge": "3 Stars!",
   "locked": "Locked",
   "tapToPlay": "TAP TO PLAY!",
@@ -39,6 +39,12 @@
   "themeShapes": "Shapes",
   "themeFruits": "Fruits",
   "themeVegetables": "Vegetables",
+  "themeDinosaur": "Dinosaur",
+  "themeSpace": "Space",
+  "themeUnderwater": "Underwater",
+  "themeFarm": "Farm",
+  "themeAmusementPark": "Amusement Park",
+  "themeHippolulu": "HippoLulu",
   "puzzlesCount": "{count} Puzzles",
   "@puzzlesCount": {
     "placeholders": {
