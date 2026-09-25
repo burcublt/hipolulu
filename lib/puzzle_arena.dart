@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'puzzle_arena_layout.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
 import 'package:hippolulu/l10n/game_l10n.dart';
 
@@ -12,27 +12,6 @@ import 'package:hippolulu/l10n/game_l10n.dart';
 /// thicker or thinner everywhere (board, tray pieces, and placed pieces
 /// all read from it).
 const double kFrameFraction = 0.03;
-
-// Layout constants shared between the widget tree and the manual geometry
-// math used to fly pieces between the board and the tray. Keeping these as
-// named constants (instead of ad-hoc numbers baked into widgets) is what
-// lets us compute a piece's board position and its tray position in the
-// exact same coordinate space.
-const double kTrayMargin = 8;
-const double kTrayHeaderH = 48;
-const double kTrayPad = 8;
-const double kBoardMargin = 8;
-const double kBoardPad = 8;
-
-/// The board is normally sized to fill whatever space is available (width
-/// or height, whichever is the tighter fit) minus the small fixed margins
-/// above. That works fine on a phone, but on a tablet — where there's a
-/// lot of vertical room — it meant the board could balloon up to nearly
-/// the full screen height. This caps it at a fraction of the available
-/// height instead, so there's always some visible breathing room around
-/// it on bigger screens. Lower this (e.g. 0.72) to shrink the board
-/// further; raise it (closer to 1.0) to let it grow bigger again.
-const double kBoardMaxHeightFraction = 0.82;
 
 // ─────────────────────────────────────────────
 //  JIGSAW MODELS & LOGIC
@@ -55,7 +34,7 @@ class _BoardCell {
 }
 
 /// Rows/cols pair for a given total piece count.
-/// 6  -> 2x3   8  -> 2x4   12 -> 3x4   (fallback: roughly square)
+/// 6  -> 3x2   8  -> 4x2   12 -> 4x3   (fallback: roughly square)
 class _GridSize {
   final int rows, cols;
   const _GridSize(this.rows, this.cols);
@@ -64,37 +43,16 @@ class _GridSize {
 _GridSize _gridSizeForPieceCount(int count) {
   switch (count) {
     case 6:
-      return const _GridSize(2, 3);
+      return const _GridSize(3, 2);
     case 8:
-      return const _GridSize(2, 4);
+      return const _GridSize(4, 2);
     case 12:
-      return const _GridSize(3, 4);
+      return const _GridSize(4, 3);
     default:
       final cols = sqrt(count).ceil();
       final rows = (count / cols).ceil();
       return _GridSize(rows, cols);
   }
-}
-
-/// Rough near-square grid dimensions for laying out `n` scattered tray
-/// pieces WITHOUT overlap. Used both to pick each piece's initial resting
-/// position (as a fraction of the scatter area — see initState/_handleReset)
-/// and, later, to size the piece boxes against the *actual* on-screen
-/// scatter area inside the LayoutBuilder. Using the same n-only formula in
-/// both places keeps them in sync regardless of how many pieces there are:
-/// more pieces automatically means more (smaller) grid cells instead of a
-/// fixed box size that inevitably overlaps once there are more than a
-/// handful of pieces.
-_GridSize _scatterGridDims(int n) {
-  // The tray column is usually narrower than it is tall, so assume a bit
-  // of that instead of a perfectly square layout — this only affects each
-  // piece's *starting* resting spot (for spreading them apart initially);
-  // actual piece *size* is computed separately against the real, on-screen
-  // scatter area (see the LayoutBuilder in _buildGame), so this doesn't
-  // need to be pixel-perfect.
-  final cols = max(2, sqrt(n * 0.6).ceil());
-  final rows = (n / cols).ceil();
-  return _GridSize(rows, cols);
 }
 
 /// Generates a rows x cols jigsaw grid with randomly assigned tab/blank
@@ -137,7 +95,9 @@ class JigsawClipper extends CustomClipper<Path> {
   final JigsawPiece piece;
   final double cellW, cellH;
   final double ox, oy;
-  JigsawClipper(this.piece, this.cellW, this.cellH, this.ox, this.oy);
+  final double edgeInflation;
+  JigsawClipper(this.piece, this.cellW, this.cellH, this.ox, this.oy,
+      {this.edgeInflation = 1.5});
 
   @override
   Path getClip(Size size) {
@@ -148,7 +108,7 @@ class JigsawClipper extends CustomClipper<Path> {
     // peek through); a small deliberate overlap guarantees there's never
     // a gap, and since the overlap shows the same picture/color on both
     // sides, it's invisible in practice.
-    const double eps = 1.5;
+    final eps = edgeInflation;
 
     Path p = Path();
     Offset topLeft = Offset(ox - eps, oy - eps);
@@ -281,9 +241,6 @@ class _PuzzleArenaState extends State<PuzzleArena>
   // ── Intro: "show the solved picture, then scatter the pieces" ──
   late AnimationController introCtrl;
   bool introDone = false;
-  late List<Offset>
-      scatterFrac; // 0..1 resting position within the tray's scatter area, per piece index
-  late List<double> scatterRot; // resting tilt (radians), per piece index
   final GlobalKey _stackKey =
       GlobalKey(); // outer Stack — used to convert drop offsets to local coords
 
@@ -333,11 +290,6 @@ class _PuzzleArenaState extends State<PuzzleArena>
     cols = grid.cols;
     pieces = generateGrid(rows, cols)..shuffle();
 
-    final rnd = Random();
-    scatterFrac = _scatterFrac(pieces.length, rnd);
-    scatterRot = List.generate(
-        pieces.length, (_) => (rnd.nextDouble() - 0.5) * 0.5); // ~ -14° .. +14°
-
     _winCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 500));
     _celebCtrl = AnimationController(
@@ -356,11 +308,6 @@ class _PuzzleArenaState extends State<PuzzleArena>
       }
     });
     _playIntro();
-
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]).catchError((_) {});
   }
 
   /// Holds the fully-solved picture on screen for a beat, then lets the
@@ -380,8 +327,6 @@ class _PuzzleArenaState extends State<PuzzleArena>
       c.dispose();
     }
     introCtrl.dispose();
-    SystemChrome.setPreferredOrientations(DeviceOrientation.values)
-        .catchError((_) {});
     super.dispose();
   }
 
@@ -424,28 +369,6 @@ class _PuzzleArenaState extends State<PuzzleArena>
     return _BoardCell(row, col);
   }
 
-  /// Starting resting positions for the tray pile: one per grid cell (see
-  /// `_scatterGridDims`) plus a small random nudge, instead of a fully
-  /// random `Offset` per piece. Fully random positions are what caused
-  /// pieces to pile up on top of each other and become unreadable/hard to
-  /// grab once there were more than 3-4 of them — placing each piece in
-  /// its own cell first guarantees they start out spread apart, and the
-  /// small nudge (plus each piece's own random tilt) keeps the "tossed
-  /// into a pile" look instead of a perfectly robotic grid.
-  List<Offset> _scatterFrac(int n, Random rnd) {
-    final grid = _scatterGridDims(n);
-    return List.generate(n, (i) {
-      final col = i % grid.cols;
-      final row = i ~/ grid.cols;
-      final jitterX = (rnd.nextDouble() - 0.5) * (0.12 / grid.cols);
-      final jitterY = (rnd.nextDouble() - 0.5) * (0.12 / grid.rows);
-      return Offset(
-        (col / grid.cols + jitterX).clamp(0.0, 1.0),
-        (row / grid.rows + jitterY).clamp(0.0, 1.0),
-      );
-    });
-  }
-
   void _handleDrop(String pieceId, String slotId) {
     if (pieceId == slotId) {
       setState(() => placed.add(pieceId));
@@ -476,10 +399,6 @@ class _PuzzleArenaState extends State<PuzzleArena>
       showWin = false;
       pieces.shuffle();
       introDone = false;
-      final rnd = Random();
-      scatterFrac = _scatterFrac(pieces.length, rnd);
-      scatterRot =
-          List.generate(pieces.length, (_) => (rnd.nextDouble() - 0.5) * 0.5);
     });
     _winCtrl.reset();
     for (final c in _starCtrls) {
@@ -495,94 +414,55 @@ class _PuzzleArenaState extends State<PuzzleArena>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: OrientationBuilder(
-        builder: (context, orientation) {
-          if (orientation == Orientation.portrait) {
-            return const _RotateDevicePrompt();
-          }
-          return _buildGame(context);
-        },
-      ),
+      body: _buildGame(context),
     );
   }
 
   Widget _buildGame(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF72D8F5),
-            Color(0xFFB0EAFC),
-            Color(0xFFCAF5E2),
-            Color(0xFFB0E8A8)
-          ],
-        ),
+        color: Color(0xFFFFF1C9),
       ),
       child: Stack(
         children: [
+          Positioned.fill(
+            child: Image.asset(
+              MediaQuery.of(context).size.width >
+                      MediaQuery.of(context).size.height
+                  ? 'assets/images/puzzle_theme/background_theme_landscape.webp'
+                  : 'assets/images/puzzle_theme/background_theme.webp',
+              fit: BoxFit.cover,
+            ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFFFFF3D3).withValues(alpha: 0.12),
+                    const Color(0xFFFFF3D3).withValues(alpha: 0.98),
+                    const Color(0xFFFFF0C6).withValues(alpha: 0.98),
+                    const Color(0xFFFFF0C6).withValues(alpha: 0.18),
+                  ],
+                  stops: const [0, 0.17, 0.86, 1],
+                ),
+              ),
+            ),
+          ),
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final totalW = constraints.maxWidth;
                 final totalH = constraints.maxHeight;
-                final trayW = totalW / 3;
-                final boardAreaW = totalW - trayW;
-
-                // ── Tray geometry (absolute coords, same space as the board) ──
-                final trayOuter =
-                    Rect.fromLTWH(0, 0, trayW, totalH).deflate(kTrayMargin);
-                final scatterArea = Rect.fromLTWH(
-                  trayOuter.left + kTrayPad,
-                  trayOuter.top + kTrayHeaderH + kTrayPad,
-                  trayOuter.width - kTrayPad * 2,
-                  trayOuter.height - kTrayHeaderH - kTrayPad * 2,
+                final layout = PuzzleArenaLayout.fit(
+                  Size(totalW, totalH),
+                  pieces.length,
+                  rows,
+                  cols,
                 );
-                // Where each piece starts resting (roughly one per grid
-                // cell — see _scatterGridDims) was already picked back in
-                // initState/_handleReset. The actual on-screen *size* of
-                // each piece is computed fresh below, against the real
-                // scatter area, so it stays correctly sized regardless of
-                // device.
-                // Size each tray piece to fit its own grid cell (with a
-                // little breathing room) instead of a fixed 55% of the
-                // whole scatter area regardless of how many pieces there
-                // are — that fixed size is what made pieces pile up on
-                // top of each other once there were more than a handful.
-                //
-                // Rather than guessing a device-size threshold (phone vs.
-                // tablet), pick the cols/rows split that best matches the
-                // *actual* scatter area's real aspect ratio, so pieces are
-                // always as big as they can possibly be without
-                // overlapping too much — this alone makes pieces bigger on
-                // a tablet (more real estate → bigger cells) without any
-                // magic size-boost constants to tune per device class.
-                final n = pieces.length;
-                final arenaAspect = scatterArea.width / scatterArea.height;
-                int sizingCols = sqrt(n * arenaAspect).round().clamp(1, n);
-                int sizingRows = (n / sizingCols).ceil();
-                final trayCellW = scatterArea.width / sizingCols;
-                final trayCellH = scatterArea.height / sizingRows;
-                // Pieces are irregular jigsaw shapes with a lot of
-                // transparent margin around the actual art, so letting the
-                // box run a bit larger than its cell (1.15x) still reads
-                // as "nicely sized pieces in a pile", not clutter.
-                final pieceBoxW = min(trayCellW, trayCellH) * 1.15;
-                final pieceBoxH = pieceBoxW;
-
-                // ── Board geometry (absolute coords) ──
-                final boardOuter = Rect.fromLTWH(trayW, 0, boardAreaW, totalH)
-                    .deflate(kBoardMargin);
-                final boardPadded = boardOuter.deflate(kBoardPad);
-                final squareSize = min(
-                  min(boardPadded.width, boardPadded.height),
-                  totalH * kBoardMaxHeightFraction,
-                );
-                final boardRect = Rect.fromCenter(
-                    center: boardPadded.center,
-                    width: squareSize,
-                    height: squareSize);
+                final boardRect = layout.board;
 
                 final boardW = boardRect.width;
                 final boardH = boardRect.height;
@@ -602,14 +482,7 @@ class _PuzzleArenaState extends State<PuzzleArena>
                       cellH + overflowH * 2,
                     );
 
-                Rect pieceTrayRect(int i) => Rect.fromLTWH(
-                      scatterArea.left +
-                          scatterFrac[i].dx * (scatterArea.width - pieceBoxW),
-                      scatterArea.top +
-                          scatterFrac[i].dy * (scatterArea.height - pieceBoxH),
-                      pieceBoxW,
-                      pieceBoxH,
-                    );
+                Rect pieceTrayRect(int i) => layout.homes[i];
 
                 return AnimatedBuilder(
                   animation: introCtrl,
@@ -623,10 +496,10 @@ class _PuzzleArenaState extends State<PuzzleArena>
                         // board/tray areas use the full space instead of being
                         // constrained inside a separate white container.
                         Positioned(
-                          left: trayOuter.left + 4,
-                          top: trayOuter.top + 4,
-                          width: trayOuter.width - 8,
-                          height: kTrayHeaderH - 4,
+                          left: 16,
+                          top: 6,
+                          width: totalW - 32,
+                          height: 52,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -635,30 +508,68 @@ class _PuzzleArenaState extends State<PuzzleArena>
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 14, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.6),
+                                  color: const Color(0xFFFFF8E9),
+                                  border: Border.all(
+                                      color: const Color(0xFFFFCE78), width: 2),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                        color: Color(0x447B481A),
+                                        offset: Offset(0, 3),
+                                        blurRadius: 3)
+                                  ],
                                   borderRadius: BorderRadius.circular(999),
                                 ),
-                                child: Text(
-                                    '${placed.length} / ${pieces.length}',
-                                    style: const TextStyle(
-                                        fontFamily: 'Baloo2 ExtraBold',
-                                        fontSize: 16,
-                                        color: Color(0xFF7854B8),
-                                        fontWeight: FontWeight.bold)),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.extension_rounded,
+                                        color: Color(0xFF6282D9), size: 28),
+                                    const SizedBox(width: 10),
+                                    Text('${placed.length}/${pieces.length}',
+                                        key: const ValueKey('puzzle-progress'),
+                                        style: const TextStyle(
+                                            fontFamily: 'Baloo2 ExtraBold',
+                                            fontSize: 22,
+                                            color: Color(0xFF72432C),
+                                            fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
                         ),
 
-                        // board frame image — always fully visible, pixel-perfect.
-                        // Unsolved cells get covered individually below (per-piece,
-                        // exact jigsaw shape) instead of one big rectangle, so there's
-                        // no seam where a placed piece's edge meets a flat placeholder.
+                        Positioned.fromRect(
+                          rect: boardRect.inflate(10),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Color(0xFFFFDF83), Color(0xFFFFBB4D)],
+                              ),
+                              borderRadius: BorderRadius.circular(28),
+                              border: Border.all(
+                                  color: const Color(0xFFFFF8D5), width: 3),
+                              boxShadow: const [
+                                BoxShadow(
+                                    color: Color(0xFFC58534),
+                                    offset: Offset(0, 4)),
+                                BoxShadow(
+                                    color: Color(0x33714219),
+                                    offset: Offset(0, 7),
+                                    blurRadius: 10),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // The opaque cream cover below reveals only pieces that
+                        // have not yet flown out or have been correctly placed.
                         Positioned.fromRect(
                           rect: boardRect,
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(16),
-                            child: Image.asset(imageAsset, fit: BoxFit.fill),
+                            child: Image.asset(imageAsset, fit: BoxFit.cover),
                           ),
                         ),
                         if (wrongFlash)
@@ -682,7 +593,20 @@ class _PuzzleArenaState extends State<PuzzleArena>
                         // and is never drawn at all — so there is nothing left that can
                         // show a seam between them.
                         Builder(builder: (context) {
-                          Path? combinedCover;
+                          // Cover the picture's outer strip too, so no image
+                          // remains visible around the empty board's edges.
+                          var combinedCover = Path.combine(
+                            PathOperation.difference,
+                            Path()
+                              ..addRect(Rect.fromLTWH(0, 0, boardW, boardH)),
+                            Path()
+                              ..addRect(Rect.fromLTWH(
+                                frameW,
+                                frameH,
+                                innerW,
+                                innerH,
+                              )),
+                          );
                           for (int i = 0; i < pieces.length; i++) {
                             final p = pieces[i];
                             final isPlacedNow = introDone
@@ -696,22 +620,41 @@ class _PuzzleArenaState extends State<PuzzleArena>
                                     frameW + p.col * cellW,
                                     frameH + p.row * cellH)
                                 .getClip(Size(boardW, boardH));
-                            combinedCover = combinedCover == null
-                                ? piecePath
-                                : Path.combine(PathOperation.union,
-                                    combinedCover, piecePath);
+                            combinedCover = Path.combine(
+                                PathOperation.union, combinedCover, piecePath);
                           }
-                          if (combinedCover == null)
-                            return const SizedBox.shrink();
                           return Positioned.fromRect(
                             rect: boardRect,
-                            child: ClipPath(
-                              clipper: _StaticPathClipper(combinedCover),
-                              child: Container(color: const Color(0xFFE3A868)),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: ClipPath(
+                                clipper: _StaticPathClipper(combinedCover),
+                                child: const DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFFFFEBCD),
+                                        Color(0xFFFFF3DB)
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           );
                         }),
 
+                        Positioned.fromRect(
+                          rect: boardRect,
+                          child: IgnorePointer(
+                            child: CustomPaint(
+                              painter: _PuzzleGuidePainter(
+                                  pieces, cellW, cellH, frameW, frameH),
+                            ),
+                          ),
+                        ),
                         // ── board drop target ──
                         // ONE DragTarget covering the whole board, instead
                         // of a separate small target per piece. We figure
@@ -723,9 +666,16 @@ class _PuzzleArenaState extends State<PuzzleArena>
                         // it so easy to "miss" on a phone, where fingers
                         // are big relative to the cells.
                         Positioned.fromRect(
-                          rect: boardOuter,
+                          rect: boardRect,
                           child: DragTarget<String>(
                             onAcceptWithDetails: (details) {
+                              final pieceIndex = pieces
+                                  .indexWhere((p) => p.id == details.data);
+                              if (pieceIndex < 0 ||
+                                  placed.contains(details.data)) {
+                                return;
+                              }
+                              final home = layout.homes[pieceIndex];
                               final cell = _cellAt(
                                 details.offset,
                                 boardRect,
@@ -736,7 +686,7 @@ class _PuzzleArenaState extends State<PuzzleArena>
                                 rows,
                                 cols,
                                 dragCenterOffset:
-                                    Offset(pieceBoxW * 0.5, pieceBoxH * 0.5),
+                                    Offset(home.width * 0.5, home.height * 0.5),
                               );
                               if (cell == null) return;
                               final target = pieces.firstWhere((p) =>
@@ -759,7 +709,7 @@ class _PuzzleArenaState extends State<PuzzleArena>
                               final local = introDone ? 1.0 : _localProgress(i);
                               final rect = Rect.lerp(pieceBoardRect(pieces[i]),
                                   pieceTrayRect(i), local)!;
-                              final angle = scatterRot[i] * local;
+                              const angle = 0.0;
                               return Positioned.fromRect(
                                 rect: rect,
                                 child: Transform.rotate(
@@ -771,50 +721,8 @@ class _PuzzleArenaState extends State<PuzzleArena>
                                       imageAsset: imageAsset,
                                       rows: rows,
                                       cols: cols,
-                                      onDragEnd: (details) {
-                                        // Move this piece's resting spot to
-                                        // wherever it was dropped, clamped
-                                        // to stay inside the tray. We used
-                                        // to bail out entirely (leaving the
-                                        // piece at its old spot) whenever
-                                        // the drop point measured as just
-                                        // outside the scatter area — but
-                                        // that early-exit is exactly what
-                                        // made drops feel like they
-                                        // "silently failed" and snapped
-                                        // back, even for drops that looked
-                                        // perfectly fine inside the tray.
-                                        // Always clamping instead means a
-                                        // drop is *never* silently ignored:
-                                        // worst case it lands at the
-                                        // nearest valid tray edge instead
-                                        // of exactly where you aimed.
-                                        //
-                                        // `details.offset` is also the
-                                        // *top-left* of the dragged piece,
-                                        // not where you visually dropped
-                                        // it — adding half the piece size
-                                        // recovers its center.
-                                        final stackBox = _stackKey
-                                            .currentContext
-                                            ?.findRenderObject() as RenderBox?;
-                                        if (stackBox == null) return;
-                                        final localPoint = stackBox
-                                            .globalToLocal(details.offset +
-                                                Offset(pieceBoxW / 2,
-                                                    pieceBoxH / 2));
-                                        final fx = ((localPoint.dx -
-                                                    scatterArea.left) /
-                                                (scatterArea.width - pieceBoxW))
-                                            .clamp(0.0, 1.0);
-                                        final fy =
-                                            ((localPoint.dy - scatterArea.top) /
-                                                    (scatterArea.height -
-                                                        pieceBoxH))
-                                                .clamp(0.0, 1.0);
-                                        setState(() =>
-                                            scatterFrac[i] = Offset(fx, fy));
-                                      },
+                                      // Incorrect drops return to their own home,
+                                      // keeping every piece visible and separated.
                                     ),
                                   ),
                                 ),
@@ -845,97 +753,42 @@ class _PuzzleArenaState extends State<PuzzleArena>
   }
 }
 
-/// Plain rounded translucent background panel, reused for both the tray
-/// and the board's outer chrome.
-// ─────────────────────────────────────────────
-//  ROTATE-DEVICE PROMPT (shown while in portrait)
-// ─────────────────────────────────────────────
-class _RotateDevicePrompt extends StatefulWidget {
-  const _RotateDevicePrompt();
+class _PuzzleGuidePainter extends CustomPainter {
+  final List<JigsawPiece> pieces;
+  final double cellW, cellH, frameW, frameH;
+  _PuzzleGuidePainter(
+      this.pieces, this.cellW, this.cellH, this.frameW, this.frameH);
 
   @override
-  State<_RotateDevicePrompt> createState() => _RotateDevicePromptState();
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFC99B64).withValues(alpha: 0.48)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.75;
+    for (final piece in pieces) {
+      canvas.drawPath(
+          JigsawClipper(piece, cellW, cellH, frameW + piece.col * cellW,
+                  frameH + piece.row * cellH,
+                  edgeInflation: 0)
+              .getClip(size),
+          paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PuzzleGuidePainter old) =>
+      old.cellW != cellW || old.cellH != cellH || old.pieces != pieces;
 }
 
-class _RotateDevicePromptState extends State<_RotateDevicePrompt>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1400))
-      ..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF72D8F5),
-            Color(0xFFB0EAFC),
-            Color(0xFFCAF5E2),
-            Color(0xFFB0E8A8)
-          ],
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _ctrl,
-              builder: (_, child) {
-                final angle = (-90 * (1 - _ctrl.value)) * pi / 180;
-                return Transform.rotate(angle: angle, child: child);
-              },
-              child: const Icon(Icons.stay_current_portrait_rounded,
-                  size: 90, color: Color(0xFF5C28A0)),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              AppLocalizations.of(context)!.rotateDevicePrompt,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontFamily: 'Baloo2 ExtraBold',
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5C28A0)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────
-//  TRAY PIECE (Draggable) — used both at rest in the tray and, wrapped in
-//  an IgnorePointer + Transform by the parent, as the flying piece during
-//  the intro animation.
-// ─────────────────────────────────────────────
 class _TrayPiece extends StatelessWidget {
   final JigsawPiece piece;
   final String imageAsset;
   final int rows, cols;
-  final void Function(DraggableDetails)? onDragEnd;
   const _TrayPiece(
       {required this.piece,
       required this.imageAsset,
       required this.rows,
-      required this.cols,
-      this.onDragEnd});
+      required this.cols});
 
   @override
   Widget build(BuildContext context) {
@@ -962,7 +815,11 @@ class _TrayPiece extends StatelessWidget {
           child: SizedBox(
             width: cellW + overflowW * 2,
             height: cellH + overflowH * 2,
-            child: ClipPath(
+            child: PhysicalShape(
+              elevation: 4,
+              color: const Color(0xFFFFE5AC),
+              shadowColor: const Color(0xAA774519),
+              clipBehavior: Clip.antiAlias,
               clipper: JigsawClipper(piece, cellW, cellH, overflowW, overflowH),
               child: Stack(
                 children: [
@@ -971,7 +828,7 @@ class _TrayPiece extends StatelessWidget {
                     top: -(frameH + piece.row * cellH) + overflowH,
                     width: boardW,
                     height: boardH,
-                    child: Image.asset(imageAsset, fit: BoxFit.fill),
+                    child: Image.asset(imageAsset, fit: BoxFit.cover),
                   ),
                   Positioned.fill(
                     child: Container(
@@ -989,7 +846,9 @@ class _TrayPiece extends StatelessWidget {
         );
 
         return Draggable<String>(
+          key: ValueKey('puzzle-piece-${piece.id}'),
           data: piece.id,
+          maxSimultaneousDrags: 1,
           feedback: Material(
             color: Colors.transparent,
             child: Transform.scale(
@@ -1000,7 +859,6 @@ class _TrayPiece extends StatelessWidget {
                         width: widgetW, height: widgetH, child: content))),
           ),
           childWhenDragging: Opacity(opacity: 0.3, child: content),
-          onDragEnd: onDragEnd,
           child: content,
         );
       },
@@ -1011,22 +869,58 @@ class _TrayPiece extends StatelessWidget {
 // ─────────────────────────────────────────────
 //  BACK BUTTON
 // ─────────────────────────────────────────────
-class _BackButton extends StatelessWidget {
+class _BackButton extends StatefulWidget {
   final VoidCallback onTap;
   const _BackButton({required this.onTap});
 
   @override
+  State<_BackButton> createState() => _BackButtonState();
+}
+
+class _BackButtonState extends State<_BackButton> {
+  double _scale = 1.0;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.68),
-          borderRadius: BorderRadius.circular(999),
+      onTapDown: (_) => setState(() => _scale = 0.88),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 10, 20, 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.68),
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF643CC8).withValues(alpha: 0.15),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.chevron_left_rounded,
+                  size: 24, color: Color(0xFF5C28A0)),
+              const SizedBox(width: 2),
+              Text(AppLocalizations.of(context)!.back,
+                  style: const TextStyle(
+                    fontFamily: 'Baloo2 ExtraBold',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 19,
+                    color: Color(0xFF5C28A0),
+                  )),
+            ],
+          ),
         ),
-        child: const Icon(Icons.chevron_left_rounded,
-            size: 28, color: Color(0xFF5C28A0)),
       ),
     );
   }

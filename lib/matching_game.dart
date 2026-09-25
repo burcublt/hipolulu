@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
 import 'asset_service.dart';
+import 'matching_level_complete_dialog.dart';
+import 'matching_card_grid.dart';
 
 // ─────────────────────────────────────────────
 //  MATCHING THEME TYPE
@@ -102,20 +104,57 @@ const Map<MatchingTheme, _ThemeColors> kThemeColors = {
 // ─────────────────────────────────────────────
 //  LEVEL DEFINITIONS
 // ─────────────────────────────────────────────
-class _Level {
-  final int pairs, previewSeconds, number;
-  const _Level({
-    required this.pairs,
+class MatchingLevel {
+  final int level;
+  final int pairCount;
+  final int previewSeconds;
+  final String completeCharacter;
+
+  const MatchingLevel({
+    required this.level,
+    required this.pairCount,
     required this.previewSeconds,
-    required this.number,
+    required this.completeCharacter,
   });
 }
 
-const List<_Level> kLevels = [
-  _Level(pairs: 5, previewSeconds: 10, number: 1),
-  _Level(pairs: 6, previewSeconds: 12, number: 2),
-  _Level(pairs: 8, previewSeconds: 14, number: 3),
-  _Level(pairs: 10, previewSeconds: 16, number: 4),
+const List<MatchingLevel> kLevels = [
+  MatchingLevel(
+    level: 1,
+    pairCount: 5,
+    previewSeconds: 10,
+    completeCharacter: 'assets/matching/level_complete/lion.webp',
+  ),
+  MatchingLevel(
+    level: 2,
+    pairCount: 6,
+    previewSeconds: 12,
+    completeCharacter: 'assets/matching/level_complete/cat.webp',
+  ),
+  MatchingLevel(
+    level: 3,
+    pairCount: 8,
+    previewSeconds: 14,
+    completeCharacter: 'assets/matching/level_complete/rocket.webp',
+  ),
+  MatchingLevel(
+    level: 4,
+    pairCount: 10,
+    previewSeconds: 16,
+    completeCharacter: 'assets/matching/level_complete/cup.webp',
+  ),
+  MatchingLevel(
+    level: 5,
+    pairCount: 12,
+    previewSeconds: 18,
+    completeCharacter: 'assets/matching/level_complete/star.webp',
+  ),
+  MatchingLevel(
+    level: 6,
+    pairCount: 14,
+    previewSeconds: 20,
+    completeCharacter: 'assets/matching/level_complete/dinosaurs.webp',
+  ),
 ];
 
 // ─────────────────────────────────────────────
@@ -220,7 +259,7 @@ class _MatchingGameState extends State<MatchingGame>
     if (mounted) {
       setState(() {
         _cards = buildCards(widget.theme,
-            kLevels[_levelIdx.clamp(0, kLevels.length - 1)].pairs);
+            kLevels[_levelIdx.clamp(0, kLevels.length - 1)].pairCount);
       });
     }
   }
@@ -233,7 +272,7 @@ class _MatchingGameState extends State<MatchingGame>
     super.dispose();
   }
 
-  _Level get _level => kLevels[_levelIdx.clamp(0, kLevels.length - 1)];
+  MatchingLevel get _level => kLevels[_levelIdx.clamp(0, kLevels.length - 1)];
 
   void _startLevel(int idx) {
     _checkTimer?.cancel();
@@ -241,7 +280,7 @@ class _MatchingGameState extends State<MatchingGame>
     setState(() {
       _levelIdx = idx;
       _cards = buildCards(
-          widget.theme, kLevels[idx.clamp(0, kLevels.length - 1)].pairs);
+          widget.theme, kLevels[idx.clamp(0, kLevels.length - 1)].pairCount);
       _phase = Phase.preview;
       _countdown = kLevels[idx.clamp(0, kLevels.length - 1)].previewSeconds;
       _selected.clear();
@@ -296,9 +335,9 @@ class _MatchingGameState extends State<MatchingGame>
           debugPrint('Audio file not found: $soundPath');
         });
 
-        if (_matched.length == _level.pairs) {
+        if (_matched.length == _level.pairCount) {
           Future.delayed(const Duration(milliseconds: 600), () {
-            if (mounted) setState(() => _showWin = true);
+            if (mounted) _showLevelCompleteDialog();
           });
         }
         _checkTimer = Timer(const Duration(milliseconds: 500), () {
@@ -310,7 +349,7 @@ class _MatchingGameState extends State<MatchingGame>
             });
         });
       } else {
-                setState(() {
+        setState(() {
           _showWrongToast = true;
           _lives--;
         });
@@ -333,6 +372,45 @@ class _MatchingGameState extends State<MatchingGame>
     }
   }
 
+  Future<void> _showLevelCompleteDialog() async {
+    if (_showWin || !mounted) return;
+
+    setState(() {
+      _showWin = true;
+      _phase = Phase.won;
+      _disabled = true;
+    });
+
+    final bool hasNextLevel = _levelIdx < kLevels.length - 1;
+
+    await showMatchingLevelCompleteDialog(
+      context: context,
+      level: _level.level,
+      characterAsset: _level.completeCharacter,
+      hasNextLevel: hasNextLevel,
+      onNextLevel: () {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (hasNextLevel && mounted) {
+          _startLevel(_levelIdx + 1);
+        }
+      },
+      onRetry: () {
+        Navigator.of(context, rootNavigator: true).pop();
+        if (mounted) {
+          _startLevel(_levelIdx);
+        }
+      },
+      onMenu: () {
+        Navigator.of(context, rootNavigator: true).pop();
+        widget.onBack();
+      },
+    );
+
+    if (mounted && _showWin) {
+      setState(() => _showWin = false);
+    }
+  }
+
   bool _isFaceUp(CardState card) =>
       _phase == Phase.preview ||
       _matched.contains(card.pairId) ||
@@ -340,81 +418,69 @@ class _MatchingGameState extends State<MatchingGame>
 
   @override
   Widget build(BuildContext context) {
-    final stars = calcStars(0, _level.pairs);
     return Scaffold(
       body: Stack(
         children: [
           LayoutBuilder(
+            builder: (
+              BuildContext context,
+              BoxConstraints constraints,
+            ) {
+              final width = constraints.maxWidth;
+              final height = constraints.maxHeight;
 
-        builder: (
-          BuildContext context,
-          BoxConstraints constraints,
-        ) {
-          final width = constraints.maxWidth;
-          final height = constraints.maxHeight;
+              final bool isLandscape = width > height;
 
-          final bool isLandscape = width > height;
+              return Stack(
+                children: [
+                  // ==============================================================
+                  // BACKGROUND
+                  // ==============================================================
 
-          return Stack(
-            children: [
-              // ==============================================================
-              // BACKGROUND
-              // ==============================================================
-
-              Positioned.fill(
-                child: Image.asset(
-                  isLandscape
-                      ? _MatchingGameAssets.backgroundLandscape
-                      : _MatchingGameAssets.backgroundPortrait,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.center,
-                ),
-              ),
-
-              // Background readability overlay.
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Container(
-                    color: Colors.white.withValues(
-                      alpha: 0.03,
+                  Positioned.fill(
+                    child: Image.asset(
+                      isLandscape
+                          ? _MatchingGameAssets.backgroundLandscape
+                          : _MatchingGameAssets.backgroundPortrait,
+                      fit: BoxFit.cover,
+                      alignment: Alignment.center,
                     ),
                   ),
-                ),
-              ),
 
-              // ==============================================================
-              // CONTENT
-              // ==============================================================
-
-              SafeArea(
-                child: isLandscape
-                    ? _buildLandscape(
-                        width,
-                        height,
-                      )
-                    : _buildPortrait(
-                        width,
-                        height,
+                  // Background readability overlay.
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Container(
+                        color: Colors.white.withValues(
+                          alpha: 0.03,
+                        ),
                       ),
-              ),
-            ],
-          );
-        },
+                    ),
+                  ),
+
+                  // ==============================================================
+                  // CONTENT
+                  // ==============================================================
+
+                  SafeArea(
+                    child: isLandscape
+                        ? _buildLandscape(
+                            width,
+                            height,
+                          )
+                        : _buildPortrait(
+                            width,
+                            height,
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
-      if (_showWin)
-        _WinOverlay(
-          level: _level,
-          levelIdx: _levelIdx,
-          moves: 0,
-          stars: stars,
-          onNextLevel: () => _startLevel(_levelIdx + 1),
-          onRetry: () => _startLevel(_levelIdx),
-          onBack: widget.onBack,
-        ),
-    ],
-    ),
-  );
-}
+    );
+  }
 
   // ==========================================================================
   // PORTRAIT
@@ -442,10 +508,10 @@ class _MatchingGameState extends State<MatchingGame>
             0,
           ),
           child: _TopBar(
-            level: _level.number,
+            level: _level.level,
             matchedPairs: _matched.length,
             lives: _lives,
-            totalPairs: _level.pairs,
+            totalPairs: _level.pairCount,
           ),
         ),
 
@@ -545,12 +611,12 @@ class _MatchingGameState extends State<MatchingGame>
               ),
               const SizedBox(width: 16),
               _LevelBadge(
-                level: _level.number,
+                level: _level.level,
               ),
               const SizedBox(width: 8),
               _PairsBadge(
                 current: _matched.length,
-                total: _level.pairs,
+                total: _level.pairCount,
               ),
             ],
           ),
@@ -569,13 +635,9 @@ class _MatchingGameState extends State<MatchingGame>
               isFaceUp: _isFaceUp,
               isMatched: (card) => _matched.contains(card.pairId),
               isLandscape: true,
-              isTablet: width >= 900,
+              isTablet: height >= 600,
             ),
           ),
-        ),
-
-        _BottomHint(
-          memorizing: (_phase == Phase.preview),
         ),
 
         const SizedBox(height: 8),
@@ -993,85 +1055,19 @@ class _GameGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (
-        BuildContext context,
-        BoxConstraints constraints,
-      ) {
-        final int columns = _calculateColumns(
-          constraints,
-        );
-
-        final double spacing = isTablet ? 14 : 10;
-
-        final int rows = (cards.length / columns).ceil();
-
-        final double availableWidth =
-            constraints.maxWidth - ((columns - 1) * spacing);
-
-        final double availableHeight =
-            constraints.maxHeight - ((rows - 1) * spacing);
-
-        final double cardWidth = availableWidth / columns;
-
-        final double cardHeight = availableHeight / rows;
-
-        // Kartların fazla uzamasını engelliyoruz.
-        final double ratio = (cardWidth / cardHeight).clamp(
-          0.72,
-          1.05,
-        );
-
-        return Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 950,
-            ),
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              itemCount: cards.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
-                crossAxisSpacing: spacing,
-                mainAxisSpacing: spacing,
-                childAspectRatio: ratio,
-              ),
-              itemBuilder: (context, index) {
-                final card = cards[index];
-
-                return _MemoryCard(
-                  card: card,
-                  faceUp: isFaceUp(card),
-                  matched: isMatched(card),
-                  onTap: () => onCardTap(card),
-                );
-              },
-            ),
-          ),
+    return MatchingCardGrid(
+      itemCount: cards.length,
+      isTablet: isTablet,
+      itemBuilder: (context, index) {
+        final card = cards[index];
+        return _MemoryCard(
+          card: card,
+          faceUp: isFaceUp(card),
+          matched: isMatched(card),
+          onTap: () => onCardTap(card),
         );
       },
     );
-  }
-
-  int _calculateColumns(
-    BoxConstraints constraints,
-  ) {
-    // 10 kart için:
-    //
-    // Phone portrait  -> 3
-    // Tablet portrait -> 5
-    // Landscape       -> 5
-
-    if (isLandscape) {
-      return 5;
-    }
-
-    if (isTablet) {
-      return 5;
-    }
-
-    return 3;
   }
 }
 
@@ -1339,251 +1335,8 @@ class _BottomHint extends StatelessWidget {
 }
 
 // ============================================================================
-// TEMPORARY WIN DIALOG
+// WRONG TOAST
 // ============================================================================
-
-class _WinOverlay extends StatefulWidget {
-  final _Level level;
-  final int levelIdx, moves, stars;
-  final VoidCallback onNextLevel, onRetry, onBack;
-
-  const _WinOverlay({
-    required this.level,
-    required this.levelIdx,
-    required this.moves,
-    required this.stars,
-    required this.onNextLevel,
-    required this.onRetry,
-    required this.onBack,
-  });
-
-  @override
-  State<_WinOverlay> createState() => _WinOverlayState();
-}
-
-class _WinOverlayState extends State<_WinOverlay>
-    with TickerProviderStateMixin {
-  late AnimationController _celebCtrl, _entryCtrl;
-  late List<AnimationController> _starCtrls;
-
-  @override
-  void initState() {
-    super.initState();
-    _entryCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500))
-      ..forward();
-    _celebCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500))
-      ..repeat(reverse: true);
-    _starCtrls = List.generate(3, (i) {
-      final c = AnimationController(
-          vsync: this, duration: const Duration(milliseconds: 400));
-      Future.delayed(Duration(milliseconds: 350 + i * 150), () {
-        if (mounted) c.forward();
-      });
-      return c;
-    });
-  }
-
-  @override
-  void dispose() {
-    _celebCtrl.dispose();
-    _entryCtrl.dispose();
-    for (final c in _starCtrls) c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final levelLabel = l10n.levelLabel(widget.level.number);
-    final nextLevel = widget.levelIdx < kLevels.length - 1
-        ? kLevels[widget.levelIdx + 1]
-        : null;
-
-    return FadeTransition(
-      opacity: _entryCtrl,
-      child: Container(
-        color: const Color(0xFF64BE3C).withValues(alpha: 0.93),
-        child: Center(
-          child: ScaleTransition(
-            scale:
-                CurvedAnimation(parent: _entryCtrl, curve: Curves.elasticOut),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 🎉 celebrate
-                  AnimatedBuilder(
-                    animation: _celebCtrl,
-                    builder: (_, child) => Transform.scale(
-                      scale: 1.0 + 0.15 * _celebCtrl.value,
-                      child: Transform.rotate(
-                        angle: (-10 + 20 * _celebCtrl.value) * pi / 180,
-                        child: child,
-                      ),
-                    ),
-                    child: const Text('🎉', style: TextStyle(fontSize: 72)),
-                  ),
-                  const SizedBox(height: 12),
-
-                  Text(l10n.levelDone(levelLabel),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'Baloo2 ExtraBold',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 42,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(color: Color(0x1F000000), offset: Offset(0, 4))
-                        ],
-                      )),
-
-                  const SizedBox(height: 4),
-                  Text(l10n.matchedAllSummary(widget.level.pairs, widget.moves),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontFamily: 'Baloo2 ExtraBold',
-                          fontSize: 17,
-                          color: Colors.white)),
-
-                  const SizedBox(height: 12),
-
-                  // Stars
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                        3,
-                        (i) => Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 5),
-                              child: ScaleTransition(
-                                scale: CurvedAnimation(
-                                    parent: _starCtrls[i],
-                                    curve: Curves.elasticOut),
-                                child: Icon(Icons.star_rounded,
-                                    size: 44,
-                                    color: i < widget.stars
-                                        ? const Color(0xFFFFD93D)
-                                        : Colors.white.withValues(alpha: 0.3)),
-                              ),
-                            )),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Next Level button
-                  if (nextLevel != null)
-                    _WinButton(
-                      label: l10n.nextLevel(
-                        l10n.levelLabel(nextLevel.number),
-                        nextLevel.pairs * 2,
-                      ),
-                      primary: true,
-                      onTap: widget.onNextLevel,
-                    ),
-                  if (widget.levelIdx >= kLevels.length - 1)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Text(l10n.beatAllLevels,
-                          style: const TextStyle(
-                              fontFamily: 'Baloo2 ExtraBold',
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: Colors.white)),
-                    ),
-
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                          child: _WinButton(
-                              label: l10n.retry,
-                              primary: false,
-                              onTap: widget.onRetry)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                          child: _WinButton(
-                              label: l10n.menu,
-                              primary: false,
-                              onTap: widget.onBack)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WinButton extends StatefulWidget {
-  final String label;
-  final bool primary;
-  final VoidCallback onTap;
-  const _WinButton(
-      {required this.label, required this.primary, required this.onTap});
-  @override
-  State<_WinButton> createState() => _WinButtonState();
-}
-
-class _WinButtonState extends State<_WinButton> {
-  double _scale = 1.0;
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _scale = 0.93),
-      onTapUp: (_) {
-        setState(() => _scale = 1.0);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _scale = 1.0),
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            vertical: widget.primary ? 16 : 13,
-            horizontal: widget.primary ? 32 : 0,
-          ),
-          decoration: BoxDecoration(
-            gradient: widget.primary
-                ? const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xFFFFE857), Color(0xFFFFC300)])
-                : null,
-            color: widget.primary ? null : Colors.white.withValues(alpha: 0.28),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-                color: Colors.white.withValues(alpha: 0.5),
-                width: widget.primary ? 3 : 2.5),
-            boxShadow: widget.primary
-                ? const [
-                    BoxShadow(color: Color(0xFFC49000), offset: Offset(0, 6)),
-                    BoxShadow(
-                        color: Color(0x4DC49000),
-                        offset: Offset(0, 10),
-                        blurRadius: 20)
-                  ]
-                : null,
-          ),
-          child: Text(widget.label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Baloo2 ExtraBold',
-                fontWeight: FontWeight.bold,
-                fontSize: widget.primary ? 22 : 16,
-                color: widget.primary ? const Color(0xFF4A2800) : Colors.white,
-              )),
-        ),
-      ),
-    );
-  }
-}
 
 class _WrongToast extends StatefulWidget {
   final bool show;
@@ -1655,8 +1408,8 @@ class _WrongToastState extends State<_WrongToast>
             colors: [Color(0xFFFFF0C0), Color(0xFFFFE08A)],
           ),
           borderRadius: BorderRadius.circular(999),
-          border:
-              Border.all(color: const Color(0xFFFFFFFF).withValues(alpha: 0.8), width: 3),
+          border: Border.all(
+              color: const Color(0xFFFFFFFF).withValues(alpha: 0.8), width: 3),
           boxShadow: const [
             BoxShadow(color: Color(0xFFD4A000), offset: Offset(0, 6)),
             BoxShadow(

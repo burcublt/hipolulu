@@ -13,17 +13,13 @@ class ThemeSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return _ThemeSelectionLayout(
-              width: constraints.maxWidth,
-              height: constraints.maxHeight,
-            );
-          },
-        ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return _ThemeSelectionLayout(
+            width: constraints.maxWidth,
+            height: constraints.maxHeight,
+          );
+        },
       ),
     );
   }
@@ -115,32 +111,37 @@ class _ThemeSelectionLayout extends StatelessWidget {
         // CONTENT
         // ----------------------------------------------------------
 
-        Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: maxContentWidth,
-            ),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
-                vertical: topPadding,
+        // Keep controls clear of the notch without insetting the background.
+        SafeArea(
+          top: false,
+          bottom: false,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: maxContentWidth,
               ),
-              child: Column(
-                children: [
-                  _buildHeader(context),
-                  SizedBox(
-                    height: isLandscape
-                        ? (isTablet ? 20 : 12)
-                        : (isTablet ? 24 : 14),
-                  ),
-                  Expanded(
-                    child: _ThemeGrid(
-                      columns: columnCount,
-                      isLandscape: isLandscape,
-                      isTablet: isTablet,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: topPadding,
+                ),
+                child: Column(
+                  children: [
+                    _buildHeader(context),
+                    SizedBox(
+                      height: isLandscape
+                          ? (isTablet ? 20 : 12)
+                          : (isTablet ? 24 : 14),
                     ),
-                  ),
-                ],
+                    Expanded(
+                      child: _ThemeGrid(
+                        columns: columnCount,
+                        isLandscape: isLandscape,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

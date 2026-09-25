@@ -115,6 +115,8 @@ flutter:
     - assets/matching/background/
     - assets/matching/ui/
     - assets/matching/themes/
+    - assets/matching/level_complete/
+    - assets/puzzle/level_complete/
 
   fonts:
     - family: Baloo2
