@@ -1,0 +1,39 @@
+name: hippolulu-local
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/db_root
+      MARIADB_DATABASE: hippolulu_dev
+      MARIADB_USER: hippolulu_api
+      MARIADB_PASSWORD_FILE: /run/secrets/db_app
+    secrets: [db_root, db_app]
+    volumes:
+      - maria_data:/var/lib/mysql
+      - ./.local/mariadb/admin.cnf:/run/admin.cnf:ro
+    healthcheck:
+      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  api:
+    build: ./backend
+    ports: ["127.0.0.1:8088:8080"]
+    environment:
+      DB_HOST: db
+      DB_NAME: hippolulu_dev
+      DB_USER: hippolulu_api
+      DB_PASSWORD_FILE: /run/secrets/db_app
+    secrets: [db_app]
+    volumes:
+      - ./backend:/app:ro
+    depends_on:
+      db:
+        condition: service_healthy
+secrets:
+  db_root:
+    file: ./.local/mariadb/root_password
+  db_app:
+    file: ./.local/mariadb/app_password
+volumes:
+  maria_data:

@@ -11,12 +11,14 @@ import 'matching_theme_select.dart';
 import 'matching_game.dart';
 import 'asset_service.dart';
 import 'splash_screen.dart';
+import 'unlock_screen.dart';
 
 // ─────────────────────────────────────────────
 //  ENTRY POINT
 // ─────────────────────────────────────────────
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final localeProvider = LocaleProvider();
   await localeProvider.load();
   await AssetService().load();
@@ -234,59 +236,68 @@ class _MainMenuState extends State<MainMenu> {
     return Scaffold(
       body: SceneBackground(
         child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              children: [
-                // ── TOP BAR ──
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 3, 16, 2),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _StarsBadge(starsText: l10n.starsBadge),
-                      const _SettingsButton(),
-                    ],
-                  ),
-                ),
-
-                // ── HERO STACK (Logo + Hippo) ──
-                _HeroStack(
-                  tagline: l10n.tagline,
-                ),
-
-                // ── GAME MODE GRID (in decorative frame) ──
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isTablet ? 15 : 26,
-                    vertical: isTablet ? 20 : 18,
-                  ),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.topCenter,
-                    children: [
-                      Padding(
-                        // Scales with the same factor _SectionPill uses
-                        // for its own size — otherwise a much taller
-                        // tablet pill sinks further down into the frame
-                        // below it instead of just sitting proportionally
-                        // higher above it, like on phone.
-                        padding: EdgeInsets.only(top: 15 * pillScale),
-                        child: _GameFrame(
-                          child:
-                              _GameModeGrid(onModeSelect: widget.onModeSelect),
-                        ),
+          child: LayoutBuilder(builder: (context, constraints) {
+            return FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: constraints.maxWidth,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ── TOP BAR ──
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 3, 16, 2),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                              child: _UnlockAllButton(label: l10n.unlockAll)),
+                          const SizedBox(width: 16),
+                          const _SettingsButton(),
+                        ],
                       ),
-                      Positioned(
-                        top: -17 * pillScale,
-                        child: _SectionPill(label: l10n.chooseGame),
+                    ),
+
+                    // ── HERO STACK (Logo + Hippo) ──
+                    _HeroStack(
+                      tagline: l10n.tagline,
+                    ),
+
+                    // ── GAME MODE GRID (in decorative frame) ──
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isTablet ? 15 : 26,
+                        vertical: isTablet ? 20 : 18,
                       ),
-                    ],
-                  ),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.topCenter,
+                        children: [
+                          Padding(
+                            // Scales with the same factor _SectionPill uses
+                            // for its own size — otherwise a much taller
+                            // tablet pill sinks further down into the frame
+                            // below it instead of just sitting proportionally
+                            // higher above it, like on phone.
+                            padding: EdgeInsets.only(top: 15 * pillScale),
+                            child: _GameFrame(
+                              child: _GameModeGrid(
+                                  onModeSelect: widget.onModeSelect),
+                            ),
+                          ),
+                          Positioned(
+                            top: -17 * pillScale,
+                            child: _SectionPill(label: l10n.chooseGame),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          }),
         ),
       ),
     );
@@ -296,45 +307,64 @@ class _MainMenuState extends State<MainMenu> {
 // ─────────────────────────────────────────────
 //  TOP BAR
 // ─────────────────────────────────────────────
-class _StarsBadge extends StatelessWidget {
-  final String starsText;
-
-  const _StarsBadge({required this.starsText});
+class _UnlockAllButton extends StatelessWidget {
+  final String label;
+  const _UnlockAllButton({required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: const Color(0xFFFFD54F),
-          width: 2,
-        ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: const Color(0xFF643CC8).withValues(alpha: 0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
+              color: Color(0x446F36CD), blurRadius: 10, offset: Offset(0, 4)),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('⭐', style: TextStyle(fontSize: 16)),
-          const SizedBox(width: 5),
-          Text(
-            starsText,
-            style: const TextStyle(
-              fontFamily: 'Baloo2 ExtraBold',
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-              color: Color(0xFF5C28A0),
-            ),
+      child: Material(
+        color: const Color(0xFFFFFCF8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+          side: const BorderSide(color: Color(0xFFE4CFFF), width: 2.5),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => showUnlockScreen(context, returnOrientations: [
+            DeviceOrientation.portraitUp, DeviceOrientation.portraitDown,
+          ]),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.lock_open_rounded,
+                  size: 27,
+                  color: Color(0xFFF4AA16),
+                  shadows: [
+                    Shadow(
+                        color: Color(0x44934B00),
+                        offset: Offset(0, 1),
+                        blurRadius: 1)
+                  ]),
+              const SizedBox(width: 8),
+              Flexible(
+                  child: Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontFamily: 'Baloo2 ExtraBold',
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5421A2)))),
+              const SizedBox(width: 9),
+              Container(
+                  width: 25,
+                  height: 25,
+                  decoration: const BoxDecoration(
+                      color: Color(0xFFF0E4FC), shape: BoxShape.circle),
+                  child: const Icon(Icons.chevron_right_rounded,
+                      size: 25, color: Color(0xFFA957D4))),
+            ]),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -406,9 +436,7 @@ class _HeroStack extends StatelessWidget {
     final logoHeight = logoWidth / 1.74;
     final hippoWidth = isTablet ? 600.0 : 180.0;
     final hippoHeight = hippoWidth / 0.945;
-
     final stackHeight = isTablet ? 710.0 : 200.0;
-
     return SizedBox(
       width: double.infinity,
       height: stackHeight,
@@ -417,26 +445,23 @@ class _HeroStack extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            top: -35,
+            // Retain the original composition; only clear the top buttons.
+            top: -25,
             child: SizedBox(
+              key: const ValueKey('main-menu-logo'),
               width: logoWidth,
               height: logoHeight,
-              child: Image.asset(
-                'assets/images/logo.webp',
-                fit: BoxFit.contain,
-              ),
+              child:
+                  Image.asset('assets/images/logo.webp', fit: BoxFit.contain),
             ),
           ),
           Positioned(
             top: isTablet ? 280 : 80,
             child: SizedBox(
-              width: hippoWidth,
-              height: hippoHeight,
-              child: Image.asset(
-                'assets/images/hippo.webp',
-                fit: BoxFit.contain,
-              ),
-            ),
+                width: hippoWidth,
+                height: hippoHeight,
+                child: Image.asset('assets/images/hippo.webp',
+                    fit: BoxFit.contain)),
           ),
         ],
       ),

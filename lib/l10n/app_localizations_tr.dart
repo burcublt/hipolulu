@@ -336,4 +336,96 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get letsPlay => 'Haydi Oynayalım!';
+
+  @override
+  String get matchGreat => 'Aferin!';
+
+  @override
+  String get matchAwesome => 'Harika!';
+
+  @override
+  String get matchYay => 'Yaşasın!';
+
+  @override
+  String get matchTryAgain => 'Tekrar dene!';
+
+  @override
+  String get matchAlmost => 'Çok yaklaştın!';
+
+  @override
+  String get matchYouCan => 'Yapabilirsin!';
+
+  @override
+  String get unlockAll => 'Tümünü Aç';
+
+  @override
+  String get unlockGames => 'Tüm oyunlar bir arada';
+
+  @override
+  String get unlockGamesDetail => 'Yapboz, eşleştirme ve yeni maceralar!';
+
+  @override
+  String get unlockThemes => 'Tüm temalar ve içerikler';
+
+  @override
+  String get unlockThemesDetail => 'Kilitli tüm temaları keşfet.';
+
+  @override
+  String get unlockNew => 'Büyüyen bir oyun dünyası';
+
+  @override
+  String get unlockNewDetail => 'Keşfedilecek yeni maceralar.';
+
+  @override
+  String get unlockSafe => 'Reklamsız eğlence';
+
+  @override
+  String get unlockSafeDetail => 'Oyun keyfi kesintiye uğramasın.';
+
+  @override
+  String get unlockAnnual => '1 Yıllık Üyelik';
+
+  @override
+  String get unlockBadge => 'TÜMÜNE ERİŞİM';
+
+  @override
+  String get unlockPriceUnavailable => 'Fiyat şu anda alınamıyor';
+
+  @override
+  String get unlockSubscribe => 'Tümünü Aç';
+
+  @override
+  String get unlockBilling =>
+      'Yıllık abonelik. İptal edilmediği sürece otomatik yenilenir.';
+
+  @override
+  String get unlockRestore => 'Satın Alımları Geri Yükle';
+
+  @override
+  String get unlockPrivacy => 'Gizlilik Politikası';
+
+  @override
+  String get unlockTerms => 'Kullanım Koşulları';
+
+  @override
+  String get parentTitle => 'Ebeveyn Alanı';
+
+  @override
+  String get parentPrompt => 'Devam etmek için\nsoruyu cevaplayın.';
+
+  @override
+  String get parentRetry => 'Tekrar deneyin.';
+
+  @override
+  String get parentGreat => 'Harika!';
+
+  @override
+  String get parentContinue => 'Devam edebilirsiniz.';
+
+  @override
+  String get parentCancel => 'Vazgeç';
+
+  @override
+  String get parentStoreUnavailable =>
+      'Satın alma şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.';
 }

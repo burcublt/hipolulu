@@ -711,6 +711,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Let\'s Play!'**
   String get letsPlay;
+
+  /// No description provided for @matchGreat.
+  ///
+  /// In en, this message translates to:
+  /// **'Great job!'**
+  String get matchGreat;
+
+  /// No description provided for @matchAwesome.
+  ///
+  /// In en, this message translates to:
+  /// **'Awesome!'**
+  String get matchAwesome;
+
+  /// No description provided for @matchYay.
+  ///
+  /// In en, this message translates to:
+  /// **'Yay!'**
+  String get matchYay;
+
+  /// No description provided for @matchTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again!'**
+  String get matchTryAgain;
+
+  /// No description provided for @matchAlmost.
+  ///
+  /// In en, this message translates to:
+  /// **'Almost!'**
+  String get matchAlmost;
+
+  /// No description provided for @matchYouCan.
+  ///
+  /// In en, this message translates to:
+  /// **'You can do it!'**
+  String get matchYouCan;
+
+  /// No description provided for @unlockAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock All'**
+  String get unlockAll;
+
+  /// No description provided for @unlockGames.
+  ///
+  /// In en, this message translates to:
+  /// **'All games in one place'**
+  String get unlockGames;
+
+  /// No description provided for @unlockGamesDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Puzzles, matching and more adventures!'**
+  String get unlockGamesDetail;
+
+  /// No description provided for @unlockThemes.
+  ///
+  /// In en, this message translates to:
+  /// **'All themes and activities'**
+  String get unlockThemes;
+
+  /// No description provided for @unlockThemesDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover every locked theme.'**
+  String get unlockThemesDetail;
+
+  /// No description provided for @unlockNew.
+  ///
+  /// In en, this message translates to:
+  /// **'A growing world of play'**
+  String get unlockNew;
+
+  /// No description provided for @unlockNewDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'New adventures to explore.'**
+  String get unlockNewDetail;
+
+  /// No description provided for @unlockSafe.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad-free fun'**
+  String get unlockSafe;
+
+  /// No description provided for @unlockSafeDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enjoy playing without interruptions.'**
+  String get unlockSafeDetail;
+
+  /// No description provided for @unlockAnnual.
+  ///
+  /// In en, this message translates to:
+  /// **'1 Year Membership'**
+  String get unlockAnnual;
+
+  /// No description provided for @unlockBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'ALL ACCESS'**
+  String get unlockBadge;
+
+  /// No description provided for @unlockPriceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Price currently unavailable'**
+  String get unlockPriceUnavailable;
+
+  /// No description provided for @unlockSubscribe.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock All'**
+  String get unlockSubscribe;
+
+  /// No description provided for @unlockBilling.
+  ///
+  /// In en, this message translates to:
+  /// **'Annual subscription. Renews automatically unless cancelled.'**
+  String get unlockBilling;
+
+  /// No description provided for @unlockRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore Purchases'**
+  String get unlockRestore;
+
+  /// No description provided for @unlockPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get unlockPrivacy;
+
+  /// No description provided for @unlockTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of Use'**
+  String get unlockTerms;
+
+  /// No description provided for @parentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Area'**
+  String get parentTitle;
+
+  /// No description provided for @parentPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer the question\nto continue.'**
+  String get parentPrompt;
+
+  /// No description provided for @parentRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Please try again.'**
+  String get parentRetry;
+
+  /// No description provided for @parentGreat.
+  ///
+  /// In en, this message translates to:
+  /// **'Great!'**
+  String get parentGreat;
+
+  /// No description provided for @parentContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'You may continue.'**
+  String get parentContinue;
+
+  /// No description provided for @parentCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get parentCancel;
+
+  /// No description provided for @parentStoreUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases are currently unavailable. Please try again later.'**
+  String get parentStoreUnavailable;
 }
 
 class _AppLocalizationsDelegate

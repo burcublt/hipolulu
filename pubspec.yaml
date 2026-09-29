@@ -117,6 +117,7 @@ flutter:
     - assets/matching/themes/
     - assets/matching/level_complete/
     - assets/puzzle/level_complete/
+    - assets/splash/new/
 
   fonts:
     - family: Baloo2

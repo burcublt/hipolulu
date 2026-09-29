@@ -334,4 +334,96 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get letsPlay => '¡Vamos a Jugar!';
+
+  @override
+  String get matchGreat => '¡Muy bien!';
+
+  @override
+  String get matchAwesome => '¡Genial!';
+
+  @override
+  String get matchYay => '¡Bravo!';
+
+  @override
+  String get matchTryAgain => '¡Inténtalo otra vez!';
+
+  @override
+  String get matchAlmost => '¡Casi!';
+
+  @override
+  String get matchYouCan => '¡Tú puedes!';
+
+  @override
+  String get unlockAll => 'Desbloquear todo';
+
+  @override
+  String get unlockGames => 'Todos los juegos juntos';
+
+  @override
+  String get unlockGamesDetail => '¡Puzles, parejas y nuevas aventuras!';
+
+  @override
+  String get unlockThemes => 'Todos los temas y actividades';
+
+  @override
+  String get unlockThemesDetail => 'Descubre todos los temas bloqueados.';
+
+  @override
+  String get unlockNew => 'Un mundo de juegos que crece';
+
+  @override
+  String get unlockNewDetail => 'Nuevas aventuras por descubrir.';
+
+  @override
+  String get unlockSafe => 'Diversión sin anuncios';
+
+  @override
+  String get unlockSafeDetail => 'Disfruta jugando sin interrupciones.';
+
+  @override
+  String get unlockAnnual => 'Suscripción de 1 año';
+
+  @override
+  String get unlockBadge => 'ACCESO COMPLETO';
+
+  @override
+  String get unlockPriceUnavailable => 'Precio no disponible por ahora';
+
+  @override
+  String get unlockSubscribe => 'Desbloquear todo';
+
+  @override
+  String get unlockBilling =>
+      'Suscripción anual. Se renueva automáticamente salvo cancelación.';
+
+  @override
+  String get unlockRestore => 'Restaurar compras';
+
+  @override
+  String get unlockPrivacy => 'Privacidad';
+
+  @override
+  String get unlockTerms => 'Condiciones de uso';
+
+  @override
+  String get parentTitle => 'Área para padres';
+
+  @override
+  String get parentPrompt => 'Responde a la pregunta\npara continuar.';
+
+  @override
+  String get parentRetry => 'Inténtalo de nuevo.';
+
+  @override
+  String get parentGreat => '¡Genial!';
+
+  @override
+  String get parentContinue => 'Puedes continuar.';
+
+  @override
+  String get parentCancel => 'Cancelar';
+
+  @override
+  String get parentStoreUnavailable =>
+      'Las compras no están disponibles por ahora. Inténtalo más tarde.';
 }

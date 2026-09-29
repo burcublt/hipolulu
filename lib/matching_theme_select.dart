@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+import 'unlock_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
 import 'matching_game.dart';
@@ -53,12 +55,14 @@ class _MatchingAssets {
 // ============================================================================
 
 class MatchingThemeData {
+  final bool locked;
   final String id;
   final String title;
   final String imagePath;
   final Color color;
 
   const MatchingThemeData({
+    this.locked = false,
     required this.id,
     required this.title,
     required this.imagePath,
@@ -82,72 +86,84 @@ class MatchingThemeSelectionScreen extends StatelessWidget {
   static const List<MatchingThemeData> _themes = [
     MatchingThemeData(
       id: 'animals',
+      locked: false,
       title: 'Animals',
       imagePath: _MatchingAssets.animals,
       color: Color(0xFFFFE9A9),
     ),
     MatchingThemeData(
       id: 'fruits',
+      locked: false,
       title: 'Fruits',
       imagePath: _MatchingAssets.fruits,
       color: Color(0xFFFFD8E8),
     ),
     MatchingThemeData(
       id: 'vegetables',
+      locked: false,
       title: 'Vegetables',
       imagePath: _MatchingAssets.vegetables,
       color: Color(0xFFD9F7D4),
     ),
     MatchingThemeData(
       id: 'vehicles',
+      locked: false,
       title: 'Vehicles',
       imagePath: _MatchingAssets.vehicles,
       color: Color(0xFFD6EDFF),
     ),
     MatchingThemeData(
       id: 'dinosaurs',
+      locked: true,
       title: 'Dinosaurs',
       imagePath: _MatchingAssets.dinosaurs,
       color: Color(0xFFE6F5B8),
     ),
     MatchingThemeData(
       id: 'space',
+      locked: true,
       title: 'Space',
       imagePath: _MatchingAssets.space,
       color: Color(0xFFE8D8FF),
     ),
     MatchingThemeData(
       id: 'underwater',
+      locked: true,
       title: 'Underwater',
       imagePath: _MatchingAssets.underwater,
       color: Color(0xFFD4F5FF),
     ),
     MatchingThemeData(
       id: 'farm',
+      locked: true,
       title: 'Farm',
       imagePath: _MatchingAssets.farm,
       color: Color(0xFFFFE8C9),
     ),
     MatchingThemeData(
       id: 'insects',
+      locked: true,
       title: 'Insects',
       imagePath: _MatchingAssets.insects,
       color: Color(0xFFDEF7D4),
     ),
     MatchingThemeData(
       id: 'fairytales',
+      locked: true,
       title: 'Fairytales',
       imagePath: _MatchingAssets.fairytales,
       color: Color(0xFFFFDFEA),
     ),
     MatchingThemeData(
       id: 'jobs',
+      locked: true,
       title: 'Jobs',
       imagePath: _MatchingAssets.jobs,
       color: Color(0xFFD7F0FF),
     ),
     MatchingThemeData(
       id: 'nature',
+      locked: true,
       title: 'Nature',
       imagePath: _MatchingAssets.nature,
       color: Color(0xFFFFEDC5),
@@ -367,6 +383,10 @@ class MatchingThemeSelectionScreen extends StatelessWidget {
     BuildContext context,
     MatchingThemeData theme,
   ) {
+    if (theme.locked) {
+      showUnlockScreen(context, returnOrientations: DeviceOrientation.values);
+      return;
+    }
     debugPrint(
       'Matching theme selected: ${theme.id}',
     );
@@ -803,19 +823,26 @@ class _MatchingThemeCard extends StatelessWidget {
                       ),
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Text(
-                          theme.title,
-                          maxLines: 1,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: titleFontSize,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(
-                              0xFF271074,
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          if (theme.locked) ...[
+                            const Icon(Icons.lock_rounded,
+                                size: 18, color: Color(0xFF5720C9)),
+                            const SizedBox(width: 6),
+                          ],
+                          Text(
+                            theme.title,
+                            maxLines: 1,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: titleFontSize,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(
+                                0xFF271074,
+                              ),
+                              height: 1,
                             ),
-                            height: 1,
                           ),
-                        ),
+                        ]),
                       ),
                     ),
                   ],

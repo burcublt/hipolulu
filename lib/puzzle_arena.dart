@@ -1,7 +1,8 @@
 import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'puzzle_arena_layout.dart';
+import 'puzzle_placement_effect.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
 import 'package:hippolulu/l10n/game_l10n.dart';
 
@@ -224,10 +225,15 @@ class PuzzleArena extends StatefulWidget {
 
 class _PuzzleArenaState extends State<PuzzleArena>
     with TickerProviderStateMixin {
+  // pushReplacement briefly keeps both puzzle routes mounted.
+  static int _activeArenas = 0;
+  bool _introStarted = false;
   late final int rows;
   late final int cols;
   late final List<JigsawPiece> pieces;
   final Set<String> placed = {};
+  final Map<String, Offset> _settling = {};
+  final Map<String, double> _settlingScales = {};
   bool wrongFlash = false;
   bool showWin = false;
 
@@ -283,6 +289,11 @@ class _PuzzleArenaState extends State<PuzzleArena>
   @override
   void initState() {
     super.initState();
+    _activeArenas++;
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     imageAsset = widget.imagePath;
 
     final grid = _gridSizeForPieceCount(widget.pieceCount);
@@ -307,7 +318,6 @@ class _PuzzleArenaState extends State<PuzzleArena>
         setState(() => introDone = true);
       }
     });
-    _playIntro();
   }
 
   /// Holds the fully-solved picture on screen for a beat, then lets the
@@ -327,6 +337,10 @@ class _PuzzleArenaState extends State<PuzzleArena>
       c.dispose();
     }
     introCtrl.dispose();
+    _activeArenas--;
+    if (_activeArenas == 0) {
+      SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    }
     super.dispose();
   }
 
@@ -369,22 +383,15 @@ class _PuzzleArenaState extends State<PuzzleArena>
     return _BoardCell(row, col);
   }
 
-  void _handleDrop(String pieceId, String slotId) {
+  void _handleDrop(String pieceId, String slotId,
+      {Offset startOffset = Offset.zero, double startScale = 1}) {
     if (pieceId == slotId) {
-      setState(() => placed.add(pieceId));
-      if (placed.length == pieces.length) {
-        Future.delayed(const Duration(milliseconds: 450), () {
-          if (mounted) {
-            setState(() => showWin = true);
-            _winCtrl.forward();
-            for (int i = 0; i < _starCtrls.length; i++) {
-              Future.delayed(Duration(milliseconds: 400 + i * 180), () {
-                if (mounted) _starCtrls[i].forward();
-              });
-            }
-          }
-        });
-      }
+      if (placed.contains(pieceId)) return;
+      setState(() {
+        placed.add(pieceId);
+        _settling[pieceId] = startOffset;
+        _settlingScales[pieceId] = startScale;
+      });
     } else {
       setState(() => wrongFlash = true);
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -393,9 +400,28 @@ class _PuzzleArenaState extends State<PuzzleArena>
     }
   }
 
+  void _finishPlacement(String id) {
+    if (!mounted || !_settling.containsKey(id)) return;
+    setState(() {
+      _settling.remove(id);
+      _settlingScales.remove(id);
+      if (placed.length == pieces.length && _settling.isEmpty) showWin = true;
+    });
+    if (showWin) {
+      _winCtrl.forward();
+      for (int i = 0; i < _starCtrls.length; i++) {
+        Future.delayed(Duration(milliseconds: 400 + i * 180), () {
+          if (mounted && showWin) _starCtrls[i].forward();
+        });
+      }
+    }
+  }
+
   void _handleReset() {
     setState(() {
       placed.clear();
+      _settling.clear();
+      _settlingScales.clear();
       showWin = false;
       pieces.shuffle();
       introDone = false;
@@ -414,7 +440,45 @@ class _PuzzleArenaState extends State<PuzzleArena>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _buildGame(context),
+      body: LayoutBuilder(builder: (context, constraints) {
+        if (constraints.maxWidth <= constraints.maxHeight) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Align(
+                      alignment: Alignment.centerLeft,
+                      child: _BackButton(onTap: widget.onBack)),
+                  Expanded(
+                      child: Center(
+                          child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.screen_rotation_rounded,
+                          size: 64, color: Color(0xFF6127C9)),
+                      const SizedBox(height: 20),
+                      Text(AppLocalizations.of(context)!.rotateDevicePrompt,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontSize: 22,
+                              color: Color(0xFF6127C9),
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ))),
+                ],
+              ),
+            ),
+          );
+        }
+        if (!_introStarted) {
+          _introStarted = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _playIntro();
+          });
+        }
+        return _buildGame(context);
+      }),
     );
   }
 
@@ -610,7 +674,8 @@ class _PuzzleArenaState extends State<PuzzleArena>
                           for (int i = 0; i < pieces.length; i++) {
                             final p = pieces[i];
                             final isPlacedNow = introDone
-                                ? placed.contains(p.id)
+                                ? placed.contains(p.id) &&
+                                    !_settling.containsKey(p.id)
                                 : _localProgress(i) <= 0.0;
                             if (isPlacedNow) continue;
                             final piecePath = JigsawClipper(
@@ -691,7 +756,19 @@ class _PuzzleArenaState extends State<PuzzleArena>
                               if (cell == null) return;
                               final target = pieces.firstWhere((p) =>
                                   p.row == cell.row && p.col == cell.col);
-                              _handleDrop(details.data, target.id);
+                              final box = _stackKey.currentContext!
+                                  .findRenderObject() as RenderBox;
+                              final dropCenter = box.globalToLocal(
+                                  details.offset +
+                                      Offset(home.width / 2, home.height / 2));
+                              final destination = pieceBoardRect(target);
+                              final delta = dropCenter - destination.center;
+                              _handleDrop(details.data, target.id,
+                                  startOffset: Offset(
+                                      delta.dx / destination.width,
+                                      delta.dy / destination.height),
+                                  startScale:
+                                      home.width * 1.2 / destination.width);
                             },
                             builder: (context, candidates, rejected) {
                               // No hover highlight — keeps the board clean
@@ -728,6 +805,22 @@ class _PuzzleArenaState extends State<PuzzleArena>
                                 ),
                               );
                             }),
+                        for (final piece in pieces)
+                          if (_settling.containsKey(piece.id))
+                            Positioned.fromRect(
+                                rect: pieceBoardRect(piece),
+                                child: PuzzlePlacementEffect(
+                                  key: ValueKey('placement-${piece.id}'),
+                                  startOffset: _settling[piece.id]!,
+                                  startScale: _settlingScales[piece.id]!,
+                                  onCompleted: () => _finishPlacement(piece.id),
+                                  child: _TrayPiece(
+                                      piece: piece,
+                                      imageAsset: imageAsset,
+                                      rows: rows,
+                                      cols: cols,
+                                      draggable: false),
+                                )),
                       ],
                     );
                   },
@@ -781,11 +874,13 @@ class _PuzzleGuidePainter extends CustomPainter {
 }
 
 class _TrayPiece extends StatelessWidget {
+  final bool draggable;
   final JigsawPiece piece;
   final String imageAsset;
   final int rows, cols;
   const _TrayPiece(
-      {required this.piece,
+      {this.draggable = true,
+      required this.piece,
       required this.imageAsset,
       required this.rows,
       required this.cols});
@@ -845,6 +940,7 @@ class _TrayPiece extends StatelessWidget {
           ),
         );
 
+        if (!draggable) return content;
         return Draggable<String>(
           key: ValueKey('puzzle-piece-${piece.id}'),
           data: piece.id,
@@ -930,19 +1026,14 @@ class _BackButtonState extends State<_BackButton> {
 //  WIN OVERLAY
 // ─────────────────────────────────────────────
 //
-// Asset checklist — add these files and register them under `assets:` in
-// pubspec.yaml before running:
-//   assets/images/win/win_flame.webp    (yellow frame + balloons + stars + confetti, all baked in)
-//   assets/images/win/roket_hippo.webp  (mascot)
+const _celebrationAssets = 'assets/puzzle/level_complete/';
+
 class _WinOverlay extends StatelessWidget {
   final String animalName;
   final AnimationController winCtrl, celebCtrl;
   final List<AnimationController> starCtrls;
-  final VoidCallback onReset;
-  final VoidCallback onBack;
-  final VoidCallback onNextGame;
-  final int placedCount;
-  final int totalCount;
+  final VoidCallback onReset, onBack, onNextGame;
+  final int placedCount, totalCount;
 
   const _WinOverlay({
     required this.animalName,
@@ -962,52 +1053,171 @@ class _WinOverlay extends StatelessWidget {
       opacity: CurvedAnimation(parent: winCtrl, curve: Curves.easeIn),
       child: Stack(
         fit: StackFit.expand,
-        clipBehavior: Clip.none,
         children: [
-          // ── 1. Dimmed / blurred glimpse of the fairground scene behind ──
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              child: Container(color: Colors.black.withValues(alpha: 0.18)),
-            ),
-          ),
-
-          // ── 2. The win card (frame image + ribbon + mascot + buttons) ──
-          Center(
-            child: ScaleTransition(
-              scale: CurvedAnimation(parent: winCtrl, curve: Curves.elasticOut),
-              child: _WinCard(
-                animalName: animalName,
-                celebCtrl: celebCtrl,
-                onReset: onReset,
-                onNextGame: onNextGame,
-              ),
-            ),
-          ),
-
-          // ── 3. Top bar (Geri + X / Y) — stays on top of everything ──
+          Image.asset('${_celebrationAssets}background.webp',
+              fit: BoxFit.cover),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
                 children: [
-                  _BackButton(onTap: onBack),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.68),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '$placedCount / $totalCount',
-                      style: const TextStyle(
-                          fontFamily: 'Baloo2 ExtraBold',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Color(0xFF5C28A0)),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _BackButton(onTap: onBack),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF5DF),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: const [
+                            BoxShadow(
+                                color: Color(0x55764B21),
+                                offset: Offset(0, 3),
+                                blurRadius: 6)
+                          ],
+                        ),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          const Icon(Icons.extension_rounded,
+                              color: Color(0xFF11A9F1), size: 28),
+                          const SizedBox(width: 10),
+                          Text('$placedCount / $totalCount',
+                              style: const TextStyle(
+                                fontFamily: 'Baloo2 ExtraBold',
+                                fontSize: 22,
+                                color: Color(0xFF784226),
+                                fontWeight: FontWeight.w900,
+                              )),
+                        ]),
+                      ),
+                    ],
+                  ),
+                  Expanded(
+                    child: LayoutBuilder(builder: (context, constraints) {
+                      final width = min(
+                          constraints.maxWidth, constraints.maxHeight * 1.5);
+                      return Center(
+                        child: SizedBox(
+                          width: width,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: AnimatedBuilder(
+                                    animation: celebCtrl,
+                                    builder: (_, child) => Opacity(
+                                      opacity: 0.65 + celebCtrl.value * 0.25,
+                                      child: child,
+                                    ),
+                                    child: Image.asset(
+                                        '${_celebrationAssets}glow.webp',
+                                        fit: BoxFit.contain),
+                                  ),
+                                ),
+                              ),
+                              ...List.generate(16, (index) {
+                                const assets = [
+                                  'star',
+                                  'pink_confetti',
+                                  'blue_confetti',
+                                  'green_confetti',
+                                  'purple_confetti',
+                                  'sparkle'
+                                ];
+                                final x = [
+                                  0.04,
+                                  0.87,
+                                  0.18,
+                                  0.77,
+                                  0.02,
+                                  0.91,
+                                  0.12,
+                                  0.82
+                                ][index % 8];
+                                final y = (index ~/ 2) / 9;
+                                final side =
+                                    width * (index % 6 == 0 ? 0.11 : 0.065);
+                                return Positioned(
+                                  left: x * (width - side),
+                                  top: y * (constraints.maxHeight - side),
+                                  width: side,
+                                  height: side,
+                                  child: IgnorePointer(
+                                      child: Image.asset(
+                                          '$_celebrationAssets${assets[index % assets.length]}.webp')),
+                                );
+                              }),
+                              Positioned(
+                                top: constraints.maxHeight * 0.21,
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: ScaleTransition(
+                                  scale: Tween<double>(begin: 0.88, end: 1)
+                                      .animate(CurvedAnimation(
+                                          parent: winCtrl,
+                                          curve: Curves.easeOutBack)),
+                                  child: Image.asset(
+                                      '${_celebrationAssets}hippoInBox.webp',
+                                      alignment: Alignment.bottomCenter,
+                                      fit: BoxFit.contain),
+                                ),
+                              ),
+                              Positioned(
+                                top: 0,
+                                left: width * 0.06,
+                                right: width * 0.06,
+                                height: constraints.maxHeight * 0.27,
+                                child: FittedBox(
+                                  fit: BoxFit.contain,
+                                  child: _CelebrationTitle(
+                                      text: AppLocalizations.of(context)!
+                                          .awesome),
+                                ),
+                              ),
+                              Positioned(
+                                left: 8,
+                                right: 8,
+                                bottom: 12,
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints:
+                                        const BoxConstraints(maxWidth: 460),
+                                    child: Row(children: [
+                                      Expanded(
+                                          child: _WinButton(
+                                        label: AppLocalizations.of(context)!
+                                            .playAgain,
+                                        icon: Icons.refresh_rounded,
+                                        colors: const [
+                                          Color(0xFF9CEC34),
+                                          Color(0xFF35B514)
+                                        ],
+                                        onTap: onReset,
+                                      )),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                          child: _WinButton(
+                                        label: 'Diğer Oyuna Geç',
+                                        icon: Icons.arrow_forward_rounded,
+                                        colors: const [
+                                          Color(0xFF45D6FF),
+                                          Color(0xFF0094F4)
+                                        ],
+                                        onTap: onNextGame,
+                                      )),
+                                    ]),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
                   ),
                 ],
               ),
@@ -1019,208 +1229,144 @@ class _WinOverlay extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-//  WIN CARD
-//  A single pre-made frame image (win_flame.webp — yellow scalloped
-//  border, stars, balloons, confetti all baked in) with the ribbon,
-//  mascot and buttons layered on top of its blank inner area.
-//
-//  Everything below is laid out on a fixed-size "design canvas"
-//  (_designWidth × _designHeight) and then the *whole* canvas is scaled
-//  uniformly to fit the device via FittedBox. That keeps every proportion
-//  (button size, mascot size, ribbon size...) identical on a phone and on
-//  a tablet — it just gets bigger or smaller as one piece, so buttons
-//  never spill past the frame and the card never looks tiny on iPad.
-// ─────────────────────────────────────────────
-class _WinCard extends StatelessWidget {
-  final String animalName;
-  final AnimationController celebCtrl;
-  final VoidCallback onReset;
-  final VoidCallback onNextGame;
+class _CelebrationTitle extends StatelessWidget {
+  final String text;
+  const _CelebrationTitle({required this.text});
 
-  // Matches the win_flame.webp source dimensions (1536×1024).
-  static const double _frameAspectRatio = 1536 / 1024;
-  static const double _designWidth = 480;
-  static const double _designHeight =
-      _designWidth / _frameAspectRatio; // ~320px
-
-  const _WinCard({
-    required this.animalName,
-    required this.celebCtrl,
-    required this.onReset,
-    required this.onNextGame,
-  });
+  static const _style = TextStyle(
+    fontFamily: 'Baloo2 ExtraBold',
+    fontSize: 90,
+    height: 1.2,
+    fontWeight: FontWeight.w900,
+  );
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxW = constraints.hasBoundedWidth ? constraints.maxWidth : 800.0;
-        final maxH =
-            constraints.hasBoundedHeight ? constraints.maxHeight : 800.0;
-        final shortSide = maxW < maxH ? maxW : maxH;
-
-        // Base size: scales up on tablets
-        double cardWidth = (shortSide * 0.92).clamp(340.0, 820.0);
-
-        final maxCardHeight = maxH * 0.82;
-        if (cardWidth / _frameAspectRatio > maxCardHeight) {
-          cardWidth = maxCardHeight * _frameAspectRatio;
-        }
-
-        return SizedBox(
-          width: cardWidth,
-          height: cardWidth / _frameAspectRatio,
-          child: FittedBox(
-            fit: BoxFit.contain,
-            child: SizedBox(
-              width: _designWidth,
-              height: _designHeight,
-              child: Stack(
-                alignment: Alignment.topCenter,
-                clipBehavior: Clip.none,
-                children: [
-                  // 1. Frame background (yellow scalloped border + balloons + stars)
-                  Image.asset(
-                    'assets/images/win_flame.webp',
-                    width: _designWidth,
-                    height: _designHeight,
-                    fit: BoxFit.fill,
-                  ),
-
-                  // 2. Hippo Mascot — static (no movement animation), sitting lower
-                  // so its lower body tucks behind the buttons row.
-                  Positioned(
-                    top: 92,
-                    child: Image.asset(
-                      'assets/images/hippo.webp',
-                      height: 155,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-
-                  // 3. Ribbon banner ("Harika!"), sitting clearly above Hippo's head
-                  Positioned(
-                    top: 36,
-                    child: SizedBox(
-                      width: 210,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/images/ribbon.webp',
-                            fit: BoxFit.contain,
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(
-                              AppLocalizations.of(context)!.awesome,
-                              style: const TextStyle(
-                                  fontFamily: 'Baloo2 ExtraBold',
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 20,
-                                  color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // 4. Buttons, right at the frame's bottom edge, painted over Hippo's legs
-                  Positioned(
-                    bottom: -8,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _WinButton(
-                          label: AppLocalizations.of(context)!.playAgain,
-                          icon: Icons.refresh_rounded,
-                          colors: const [Color(0xFF8CDB4E), Color(0xFF5CB82E)],
-                          onTap: onReset,
-                        ),
-                        const SizedBox(width: 10),
-                        _WinButton(
-                          label: 'Diğer Oyuna Geç',
-                          icon: Icons.arrow_forward_rounded,
-                          colors: const [Color(0xFF5AB8FF), Color(0xFF2E8CE0)],
-                          onTap: onNextGame,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+    final letters = text.characters.toList();
+    final widths = letters.map((letter) {
+      final painter = TextPainter(
+        text: TextSpan(text: letter, style: _style),
+        textDirection: Directionality.of(context),
+      )..layout();
+      final width = painter.width;
+      painter.dispose();
+      return width;
+    }).toList();
+    final totalWidth = widths.fold<double>(0, (sum, width) => sum + width);
+    final rise = totalWidth * 0.10;
+    const padding = 28.0;
+    var left = 0.0;
+    final glyphs = <Widget>[];
+    for (var i = 0; i < letters.length; i++) {
+      final width = widths[i];
+      final position =
+          totalWidth == 0 ? 0.0 : (left + width / 2) / totalWidth * 2 - 1;
+      glyphs.add(Positioned(
+        left: padding + left,
+        top: padding + rise * position * position,
+        child: Transform.rotate(
+          angle: atan(0.4 * position),
+          child: _letter(letters[i]),
+        ),
+      ));
+      left += width;
+    }
+    return Semantics(
+      label: text,
+      header: true,
+      child: ExcludeSemantics(
+        child: SizedBox(
+          width: totalWidth + padding * 2,
+          height: 108 + rise + padding * 2,
+          child: Stack(clipBehavior: Clip.none, children: glyphs),
+        ),
+      ),
     );
   }
+
+  Widget _letter(String letter) => Stack(clipBehavior: Clip.none, children: [
+        Text(letter,
+            style: _style.copyWith(
+              foreground: Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 14
+                ..color = const Color(0xFF8F1EC4),
+              shadows: const [
+                Shadow(
+                    color: Color(0xFF5B148F),
+                    offset: Offset(0, 7),
+                    blurRadius: 3)
+              ],
+            )),
+        Text(letter,
+            style: _style.copyWith(
+                foreground: Paint()
+                  ..style = PaintingStyle.stroke
+                  ..strokeWidth = 3
+                  ..color = const Color(0xFFFFF5B2))),
+        ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (bounds) => const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFFFF499), Color(0xFFFFCF27), Color(0xFFFF9E19)],
+          ).createShader(bounds),
+          child: Text(letter, style: _style.copyWith(color: Colors.white)),
+        ),
+      ]);
 }
 
-// ─────────────────────────────────────────────
-//  WIN SCREEN PILL BUTTON (Tekrar Oyna / Diğer Oyuna Geç)
-// ─────────────────────────────────────────────
 class _WinButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final List<Color> colors;
   final VoidCallback onTap;
-
-  const _WinButton({
-    required this.label,
-    required this.icon,
-    required this.colors,
-    required this.onTap,
-  });
-
+  const _WinButton(
+      {required this.label,
+      required this.icon,
+      required this.colors,
+      required this.onTap});
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: colors,
-          ),
+            colors: colors),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: [
+          BoxShadow(
+              color: colors.last.withValues(alpha: 0.45),
+              offset: const Offset(0, 4),
+              blurRadius: 7)
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: colors.last.withValues(alpha: 0.5),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Two overlapping icons (a soft dark "shadow" copy behind the
-            // white one) give the glyph extra visual weight — reads as a
-            // bolder icon without needing a custom icon asset.
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(icon,
-                    color: Colors.black.withValues(alpha: 0.18), size: 16),
-                Icon(icon, color: Colors.white, size: 15),
-              ],
-            ),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: const TextStyle(
-                  fontFamily: 'Baloo2 ExtraBold',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12.5,
-                  color: Colors.white),
-            ),
-          ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(icon, color: Colors.white, size: 22),
+              const SizedBox(width: 8),
+              Flexible(
+                  child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(label,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontFamily: 'Baloo2 ExtraBold',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    )),
+              )),
+            ]),
+          ),
         ),
       ),
     );

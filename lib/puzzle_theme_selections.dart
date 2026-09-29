@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+import 'unlock_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
 import 'puzzle_item_selection.dart';
@@ -428,7 +430,8 @@ class ThemeCard extends StatelessWidget {
           isTablet ? 28 : 20,
         ),
         onTap: item.locked
-            ? null
+            ? () => showUnlockScreen(context,
+                returnOrientations: DeviceOrientation.values)
             : () {
                 final l10n = AppLocalizations.of(context)!;
                 Navigator.of(context).push(
@@ -500,7 +503,6 @@ class ThemeCard extends StatelessWidget {
                       // ------------------------------------------------
                       // DURUM ROZETİ
                       // kilitli  -> mor kilit
-                      // premium  -> PREMIUM etiketi + kilit
                       // açık     -> yeşil tik
                       // ------------------------------------------------
 
@@ -575,33 +577,43 @@ class _ThemeTexts extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          item.titleGetter(l10n),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: const Color(0xFF30118B),
-            fontSize: isTablet ? 18 : 13,
-            fontWeight: FontWeight.w900,
+    return LayoutBuilder(builder: (context, constraints) {
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: constraints.maxWidth,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.titleGetter(l10n),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: const Color(0xFF30118B),
+                  fontSize: isTablet ? 18 : 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                l10n.puzzlesCount(item.puzzleCount),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: const Color(0xFF6847A8),
+                  fontSize: isTablet ? 13 : 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 3),
-        Text(
-          l10n.puzzlesCount(item.puzzleCount),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: const Color(0xFF6847A8),
-            fontSize: isTablet ? 13 : 10,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
+      );
+    });
   }
 }
 
@@ -620,134 +632,13 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    /*
-    // Premium tema: PREMIUM etiketi + kilit
-    if (item.locked && item.isPremium) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _PremiumLabel(isTablet: isTablet),
-          SizedBox(width: isTablet ? 6 : 4),
-          _LockIcon(isTablet: isTablet),
-        ],
-      );
-    }
-    */
-
     // Kilitli tema: sadece kilit
     if (item.locked) {
       return _LockIcon(isTablet: isTablet);
     }
 
-    /*
-    // Tamamlanmış tema: yeşil tik
-    if (item.completed) {
-      return _CheckIcon(isTablet: isTablet);
-    }
-    */
-
     // Açık ama tamamlanmamış: rozet yok
     return const SizedBox.shrink();
-  }
-}
-
-// ================================================================
-// CHECK ICON
-// ================================================================
-
-class _CheckIcon extends StatelessWidget {
-  final bool isTablet;
-
-  const _CheckIcon({
-    required this.isTablet,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final double size = isTablet ? 42 : 32;
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: const Color(0xFF3FBF55),
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white,
-          width: isTablet ? 3 : 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF2A8C3C).withValues(alpha: 0.30),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Icon(
-        Icons.check_rounded,
-        color: Colors.white,
-        size: size * 0.52,
-      ),
-    );
-  }
-}
-
-// ================================================================
-// PREMIUM LABEL
-// ================================================================
-
-class _PremiumLabel extends StatelessWidget {
-  final bool isTablet;
-
-  const _PremiumLabel({
-    required this.isTablet,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isTablet ? 12 : 8,
-        vertical: isTablet ? 6 : 4,
-      ),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF7B3FE4),
-            Color(0xFF5B25C8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF3E168E).withValues(alpha: 0.25),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.diamond_rounded,
-            color: const Color(0xFFFF7FD8),
-            size: isTablet ? 15 : 11,
-          ),
-          SizedBox(width: isTablet ? 5 : 3),
-          Text(
-            'PREMIUM',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: isTablet ? 11 : 8,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -807,10 +698,6 @@ class ThemeItem {
   /// Tema tamamlandıysa sağ altta yeşil tik gösterilir.
   final bool completed;
 
-  /// Premium (satın alınabilir) temalarda kilit ikonunun üstünde
-  /// elmas ikonlu "PREMIUM" rozeti gösterilir.
-  final bool isPremium;
-
   const ThemeItem({
     required this.id,
     required this.titleGetter,
@@ -818,7 +705,6 @@ class ThemeItem {
     required this.asset,
     required this.locked,
     this.completed = false,
-    this.isPremium = false,
   });
 }
 
@@ -860,7 +746,7 @@ List<ThemeItem> puzzleThemeItems = [
     titleGetter: (l10n) => l10n.themeSpace,
     puzzleCount: 10,
     asset: '${kThemeImagePath}space_theme.webp',
-    locked: true,
+    locked: false,
   ),
   ThemeItem(
     id: 'dinosaur',
@@ -868,7 +754,6 @@ List<ThemeItem> puzzleThemeItems = [
     puzzleCount: 10,
     asset: '${kThemeImagePath}dinosaurs_theme.webp',
     locked: true,
-    isPremium: true,
   ),
   ThemeItem(
     id: 'underwater',

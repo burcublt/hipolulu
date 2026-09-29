@@ -6,12 +6,14 @@ class MatchingCardGrid extends StatelessWidget {
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
   final bool isTablet;
+  final Widget Function(BuildContext, List<Rect>)? foregroundBuilder;
 
   const MatchingCardGrid({
     super.key,
     required this.itemCount,
     required this.itemBuilder,
     required this.isTablet,
+    this.foregroundBuilder,
   });
 
   @override
@@ -43,19 +45,32 @@ class MatchingCardGrid extends StatelessWidget {
           child: SizedBox(
             width: columns * cardSize + (columns - 1) * spacing,
             height: rows * cardSize + (rows - 1) * spacing,
-            child: GridView.builder(
-              primary: false,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              itemCount: itemCount,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
-                crossAxisSpacing: spacing,
-                mainAxisSpacing: spacing,
-                mainAxisExtent: cardSize,
+            child: Stack(clipBehavior: Clip.none, children: [
+              GridView.builder(
+                primary: false,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: itemCount,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: spacing,
+                  mainAxisExtent: cardSize,
+                ),
+                itemBuilder: itemBuilder,
               ),
-              itemBuilder: itemBuilder,
-            ),
+              if (foregroundBuilder != null)
+                Positioned.fill(
+                    child: foregroundBuilder!(
+                        context,
+                        List.generate(
+                            itemCount,
+                            (i) => Rect.fromLTWH(
+                                (i % columns) * (cardSize + spacing),
+                                (i ~/ columns) * (cardSize + spacing),
+                                cardSize,
+                                cardSize)))),
+            ]),
           ),
         ),
       );

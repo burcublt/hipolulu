@@ -1,0 +1,12 @@
+INSERT INTO game_translations VALUES ('puzzle','en','PUZZLES');
+INSERT INTO game_translations VALUES ('matching','en','MATCHING');
+INSERT INTO game_translations VALUES ('coloring','en','COLORING');
+INSERT INTO game_translations VALUES ('counting','en','COUNTING');
+INSERT INTO game_translations VALUES ('puzzle','tr','YAPBOZ');
+INSERT INTO game_translations VALUES ('matching','tr','EŞLEŞTİRME');
+INSERT INTO game_translations VALUES ('coloring','tr','BOYAMA');
+INSERT INTO game_translations VALUES ('counting','tr','SAYMA');
+INSERT INTO game_translations VALUES ('puzzle','es','PUZZLES');
+INSERT INTO game_translations VALUES ('matching','es','MEMORIA');
+INSERT INTO game_translations VALUES ('coloring','es','COLOREAR');
+INSERT INTO game_translations VALUES ('counting','es','CONTAR');

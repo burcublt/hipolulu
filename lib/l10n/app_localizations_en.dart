@@ -335,4 +335,96 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get letsPlay => 'Let\'s Play!';
+
+  @override
+  String get matchGreat => 'Great job!';
+
+  @override
+  String get matchAwesome => 'Awesome!';
+
+  @override
+  String get matchYay => 'Yay!';
+
+  @override
+  String get matchTryAgain => 'Try again!';
+
+  @override
+  String get matchAlmost => 'Almost!';
+
+  @override
+  String get matchYouCan => 'You can do it!';
+
+  @override
+  String get unlockAll => 'Unlock All';
+
+  @override
+  String get unlockGames => 'All games in one place';
+
+  @override
+  String get unlockGamesDetail => 'Puzzles, matching and more adventures!';
+
+  @override
+  String get unlockThemes => 'All themes and activities';
+
+  @override
+  String get unlockThemesDetail => 'Discover every locked theme.';
+
+  @override
+  String get unlockNew => 'A growing world of play';
+
+  @override
+  String get unlockNewDetail => 'New adventures to explore.';
+
+  @override
+  String get unlockSafe => 'Ad-free fun';
+
+  @override
+  String get unlockSafeDetail => 'Enjoy playing without interruptions.';
+
+  @override
+  String get unlockAnnual => '1 Year Membership';
+
+  @override
+  String get unlockBadge => 'ALL ACCESS';
+
+  @override
+  String get unlockPriceUnavailable => 'Price currently unavailable';
+
+  @override
+  String get unlockSubscribe => 'Unlock All';
+
+  @override
+  String get unlockBilling =>
+      'Annual subscription. Renews automatically unless cancelled.';
+
+  @override
+  String get unlockRestore => 'Restore Purchases';
+
+  @override
+  String get unlockPrivacy => 'Privacy Policy';
+
+  @override
+  String get unlockTerms => 'Terms of Use';
+
+  @override
+  String get parentTitle => 'Parent Area';
+
+  @override
+  String get parentPrompt => 'Answer the question\nto continue.';
+
+  @override
+  String get parentRetry => 'Please try again.';
+
+  @override
+  String get parentGreat => 'Great!';
+
+  @override
+  String get parentContinue => 'You may continue.';
+
+  @override
+  String get parentCancel => 'Cancel';
+
+  @override
+  String get parentStoreUnavailable =>
+      'Purchases are currently unavailable. Please try again later.';
 }

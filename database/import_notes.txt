@@ -1,0 +1,120 @@
+Empty draft theme: puzzle/space
+Empty draft theme: puzzle/dinosaur
+Empty draft theme: puzzle/underwater
+Missing audio: assets/voices/animals/tr/bear.mp3
+Missing audio: assets/voices/animals/es/bear.mp3
+Missing audio: assets/voices/animals/tr/capybara.mp3
+Missing audio: assets/voices/animals/es/capybara.mp3
+Missing audio: assets/voices/animals/tr/cat.mp3
+Missing audio: assets/voices/animals/es/cat.mp3
+Missing audio: assets/voices/animals/tr/cow.mp3
+Missing audio: assets/voices/animals/es/cow.mp3
+Missing audio: assets/voices/animals/tr/elephant.mp3
+Missing audio: assets/voices/animals/es/elephant.mp3
+Missing audio: assets/voices/animals/tr/fox.mp3
+Missing audio: assets/voices/animals/es/fox.mp3
+Missing audio: assets/voices/animals/tr/frog.mp3
+Missing audio: assets/voices/animals/es/frog.mp3
+Missing audio: assets/voices/animals/tr/giraffe.mp3
+Missing audio: assets/voices/animals/es/giraffe.mp3
+Missing audio: assets/voices/animals/tr/lion.mp3
+Missing audio: assets/voices/animals/es/lion.mp3
+Missing audio: assets/voices/animals/tr/parrot.mp3
+Missing audio: assets/voices/animals/es/parrot.mp3
+Missing audio: assets/voices/animals/tr/rabbit.mp3
+Missing audio: assets/voices/animals/es/rabbit.mp3
+Missing audio: assets/voices/fruits/tr/apple.mp3
+Missing audio: assets/voices/fruits/es/apple.mp3
+Missing audio: assets/voices/fruits/en/avocado.mp3
+Missing audio: assets/voices/fruits/tr/avocado.mp3
+Missing audio: assets/voices/fruits/es/avocado.mp3
+Missing audio: assets/voices/fruits/tr/banana.mp3
+Missing audio: assets/voices/fruits/es/banana.mp3
+Missing audio: assets/voices/fruits/tr/blueberry.mp3
+Missing audio: assets/voices/fruits/es/blueberry.mp3
+Missing audio: assets/voices/fruits/tr/cherry.mp3
+Missing audio: assets/voices/fruits/es/cherry.mp3
+Missing audio: assets/voices/fruits/tr/grape.mp3
+Missing audio: assets/voices/fruits/es/grape.mp3
+Missing audio: assets/voices/fruits/tr/kiwi.mp3
+Missing audio: assets/voices/fruits/es/kiwi.mp3
+Missing audio: assets/voices/fruits/tr/orange.mp3
+Missing audio: assets/voices/fruits/es/orange.mp3
+Missing audio: assets/voices/fruits/tr/pineapple.mp3
+Missing audio: assets/voices/fruits/es/pineapple.mp3
+Missing audio: assets/voices/fruits/tr/strawberry.mp3
+Missing audio: assets/voices/fruits/es/strawberry.mp3
+Missing audio: assets/voices/fruits/tr/watermelon.mp3
+Missing audio: assets/voices/fruits/es/watermelon.mp3
+Missing audio: assets/voices/vegetables/en/broccoli.mp3
+Missing audio: assets/voices/vegetables/tr/broccoli.mp3
+Missing audio: assets/voices/vegetables/es/broccoli.mp3
+Missing audio: assets/voices/vegetables/tr/carrot.mp3
+Missing audio: assets/voices/vegetables/es/carrot.mp3
+Missing audio: assets/voices/vegetables/tr/corn.mp3
+Missing audio: assets/voices/vegetables/es/corn.mp3
+Missing audio: assets/voices/vegetables/tr/cucumber.mp3
+Missing audio: assets/voices/vegetables/es/cucumber.mp3
+Missing audio: assets/voices/vegetables/tr/eggplant.mp3
+Missing audio: assets/voices/vegetables/es/eggplant.mp3
+Missing audio: assets/voices/vegetables/tr/onion.mp3
+Missing audio: assets/voices/vegetables/es/onion.mp3
+Missing audio: assets/voices/vegetables/tr/potato.mp3
+Missing audio: assets/voices/vegetables/es/potato.mp3
+Missing audio: assets/voices/vegetables/tr/pumpkin.mp3
+Missing audio: assets/voices/vegetables/es/pumpkin.mp3
+Missing audio: assets/voices/vegetables/tr/tomato.mp3
+Missing audio: assets/voices/vegetables/es/tomato.mp3
+Missing audio: assets/voices/vehicles/tr/airplane.mp3
+Missing audio: assets/voices/vehicles/es/airplane.mp3
+Missing audio: assets/voices/vehicles/tr/ambulance.mp3
+Missing audio: assets/voices/vehicles/es/ambulance.mp3
+Missing audio: assets/voices/vehicles/tr/bicycle.mp3
+Missing audio: assets/voices/vehicles/es/bicycle.mp3
+Missing audio: assets/voices/vehicles/tr/bulldozer.mp3
+Missing audio: assets/voices/vehicles/es/bulldozer.mp3
+Missing audio: assets/voices/vehicles/tr/bus.mp3
+Missing audio: assets/voices/vehicles/es/bus.mp3
+Missing audio: assets/voices/vehicles/tr/car.mp3
+Missing audio: assets/voices/vehicles/es/car.mp3
+Missing audio: assets/voices/vehicles/tr/excavator.mp3
+Missing audio: assets/voices/vehicles/es/excavator.mp3
+Missing audio: assets/voices/vehicles/tr/fire_truck.mp3
+Missing audio: assets/voices/vehicles/es/fire_truck.mp3
+Missing audio: assets/voices/vehicles/tr/garbage_truck.mp3
+Missing audio: assets/voices/vehicles/es/garbage_truck.mp3
+Missing audio: assets/voices/vehicles/tr/helicopter.mp3
+Missing audio: assets/voices/vehicles/es/helicopter.mp3
+Missing audio: assets/voices/vehicles/tr/motorcycle.mp3
+Missing audio: assets/voices/vehicles/es/motorcycle.mp3
+Missing audio: assets/voices/vehicles/tr/police_car.mp3
+Missing audio: assets/voices/vehicles/es/police_car.mp3
+Missing audio: assets/voices/vehicles/tr/ship.mp3
+Missing audio: assets/voices/vehicles/es/ship.mp3
+Missing audio: assets/voices/vehicles/tr/taxi.mp3
+Missing audio: assets/voices/vehicles/es/taxi.mp3
+Missing audio: assets/voices/vehicles/tr/tractor.mp3
+Missing audio: assets/voices/vehicles/es/tractor.mp3
+Missing audio: assets/voices/vehicles/tr/train.mp3
+Missing audio: assets/voices/vehicles/es/train.mp3
+Empty draft theme: matching/dinosaurs
+Empty draft theme: matching/space
+Empty draft theme: matching/underwater
+Empty draft theme: matching/farm
+Missing translation: matching/insects/en
+Missing translation: matching/insects/tr
+Missing translation: matching/insects/es
+Empty draft theme: matching/insects
+Missing translation: matching/fairytales/en
+Missing translation: matching/fairytales/tr
+Missing translation: matching/fairytales/es
+Empty draft theme: matching/fairytales
+Missing translation: matching/jobs/en
+Missing translation: matching/jobs/tr
+Missing translation: matching/jobs/es
+Empty draft theme: matching/jobs
+Missing translation: matching/nature/en
+Missing translation: matching/nature/tr
+Missing translation: matching/nature/es
+Empty draft theme: matching/nature
+Content titles are intentionally not invented from filenames.

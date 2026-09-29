@@ -6,9 +6,40 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
 import 'package:hippolulu/puzzle_arena.dart';
+import 'package:hippolulu/puzzle_placement_effect.dart';
 import 'package:hippolulu/puzzle_arena_layout.dart';
 
 void main() {
+  testWidgets('Portrait hides the game and requests landscape until exit',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(430, 932));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final orientations = <dynamic>[];
+    tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'SystemChrome.setPreferredOrientations')
+        orientations.add(call.arguments);
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null));
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: PuzzleArena(
+          imagePath: 'assets/images/puzzles/animals/bear.webp', onBack: () {}),
+    ));
+    expect(find.byIcon(Icons.screen_rotation_rounded), findsOneWidget);
+    expect(find.byType(Draggable<String>), findsNothing);
+    expect(orientations.last, [
+      'DeviceOrientation.landscapeLeft',
+      'DeviceOrientation.landscapeRight'
+    ]);
+    await tester.pumpWidget(const SizedBox.shrink());
+    expect(orientations.last,
+        DeviceOrientation.values.map((value) => value.toString()).toList());
+  });
+
   for (final size in [
     const Size(430, 839),
     const Size(814, 409),
@@ -36,13 +67,15 @@ void main() {
     }
   }
 
-  for (final size in [const Size(430, 932), const Size(932, 430)]) {
+  for (final size in [const Size(667, 375), const Size(932, 430)]) {
     testWidgets('Puzzle drags, progress and all pieces fit $size',
         (tester) async {
       await tester.binding.setSurfaceSize(size);
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final boundaryKey = GlobalKey();
+      var nextCalls = 0;
       await tester.pumpWidget(MaterialApp(
+        locale: const Locale('tr'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: RepaintBoundary(
@@ -56,6 +89,7 @@ void main() {
             child: PuzzleArena(
               imagePath: 'assets/images/puzzles/animals/bear.webp',
               onBack: () {},
+              onNextGame: () => nextCalls++,
             ),
           ),
         ),
@@ -73,6 +107,17 @@ void main() {
           'assets/images/puzzles/animals/bear.webp',
           'assets/images/puzzle_theme/background_theme.webp',
           'assets/images/puzzle_theme/background_theme_landscape.webp',
+          ...[
+            'background',
+            'hippoInBox',
+            'glow',
+            'star',
+            'sparkle',
+            'pink_confetti',
+            'purple_confetti',
+            'blue_confetti',
+            'green_confetti'
+          ].map((name) => 'assets/puzzle/level_complete/$name.webp'),
         ]) {
           await precacheImage(AssetImage(asset), context);
         }
@@ -115,6 +160,8 @@ void main() {
       await tester.drag(home, destination - tester.getCenter(home));
       await tester.pump();
       expect(find.text('1/12'), findsOneWidget);
+      expect(find.byType(PuzzlePlacementEffect), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 250));
       expect(find.byType(Draggable<String>), findsNWidgets(11));
       expect(tester.takeException(), isNull);
 
@@ -130,6 +177,8 @@ void main() {
             .writeAsBytesSync(bytes!.buffer.asUint8List());
         image.dispose();
       });
+      await tester.pump(const Duration(milliseconds: 231));
+      expect(find.byType(PuzzlePlacementEffect), findsNothing);
       // Place the remaining pieces, including every differently sized side home.
       while (find.byType(Draggable<String>).evaluate().isNotEmpty) {
         final remaining = tester
@@ -152,10 +201,28 @@ void main() {
         expect(find.byType(Draggable<String>), findsNWidgets(before - 1));
       }
       await tester.pump(const Duration(milliseconds: 450));
+      final beforeFinish =
+          AppLocalizations.of(tester.element(find.byType(PuzzleArena)))!;
+      expect(find.text(beforeFinish.playAgain), findsNothing);
+      expect(find.byType(PuzzlePlacementEffect), findsWidgets);
+      await tester.pump(const Duration(milliseconds: 31));
+      expect(find.byType(PuzzlePlacementEffect), findsNothing);
       await tester.pump(const Duration(milliseconds: 1100));
       final l10n =
           AppLocalizations.of(tester.element(find.byType(PuzzleArena)))!;
       expect(find.text(l10n.playAgain), findsOneWidget);
+      expect(find.text(l10n.back), findsWidgets);
+      await tester.runAsync(() async {
+        final boundary = boundaryKey.currentContext!.findRenderObject()!
+            as RenderRepaintBoundary;
+        final image = await boundary.toImage(pixelRatio: 2);
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+        File('build/puzzle_preview/win_${size.width < size.height ? "portrait" : "landscape"}.png')
+            .writeAsBytesSync(bytes!.buffer.asUint8List());
+        image.dispose();
+      });
+      await tester.tap(find.text('Diğer Oyuna Geç'));
+      expect(nextCalls, 1);
       await tester.tap(find.text(l10n.playAgain));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 700));

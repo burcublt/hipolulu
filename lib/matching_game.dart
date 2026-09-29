@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:hippolulu/l10n/app_localizations.dart';
 import 'asset_service.dart';
 import 'matching_level_complete_dialog.dart';
 import 'matching_card_grid.dart';
+import 'matching_feedback.dart';
 
 // ─────────────────────────────────────────────
 //  MATCHING THEME TYPE
@@ -19,21 +19,6 @@ enum MatchingTheme {
   vegetables,
   foods,
 }
-
-// ── Yanlış eşleşme motivasyon mesajları ──
-class _WrongMsg {
-  final String emoji;
-  final String Function(AppLocalizations l10n) getText;
-  const _WrongMsg(this.emoji, this.getText);
-}
-
-final List<_WrongMsg> kWrongMessages = [
-  _WrongMsg('🙈', (l10n) => l10n.wrongTryAgain),
-  _WrongMsg('🌟', (l10n) => l10n.wrongSoClose),
-  _WrongMsg('💪', (l10n) => l10n.wrongYouCanDoIt),
-  _WrongMsg('🤔', (l10n) => l10n.wrongNotQuite),
-  _WrongMsg('😄', (l10n) => l10n.wrongAlmost),
-];
 
 // ─────────────────────────────────────────────
 //  CONTENT DATA
@@ -51,54 +36,6 @@ const Map<MatchingTheme, List<String>> kThemeEmojis = {
     '🌈',
     '🎁'
   ],
-};
-
-class _ThemeColors {
-  final Color card, cardShadow, matched;
-  final List<Color> cardBack;
-  const _ThemeColors(
-      {required this.card,
-      required this.cardShadow,
-      required this.matched,
-      required this.cardBack});
-}
-
-const Map<MatchingTheme, _ThemeColors> kThemeColors = {
-  MatchingTheme.animals: _ThemeColors(
-      card: Color(0xFFFFF7E0),
-      cardShadow: Color(0xFFC05000),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFFFF9940), Color(0xFFFFCE7A)]),
-  MatchingTheme.fruits: _ThemeColors(
-      card: Color(0xFFFFF7E0),
-      cardShadow: Color(0xFFC05000),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFFFF9940), Color(0xFFFFCE7A)]),
-  MatchingTheme.vegetables: _ThemeColors(
-      card: Color(0xFFFFF7E0),
-      cardShadow: Color(0xFFC05000),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFFFF9940), Color(0xFFFFCE7A)]),
-  MatchingTheme.fruitsAndVegetables: _ThemeColors(
-      card: Color(0xFFFFF7E0),
-      cardShadow: Color(0xFFC05000),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFFFF9940), Color(0xFFFFCE7A)]),
-  MatchingTheme.vehicles: _ThemeColors(
-      card: Color(0xFFE8F5FF),
-      cardShadow: Color(0xFF1A60B0),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFF3A9EE0), Color(0xFF90D0FF)]),
-  MatchingTheme.foods: _ThemeColors(
-      card: Color(0xFFE8F5FF),
-      cardShadow: Color(0xFF1A60B0),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFF3A9EE0), Color(0xFF90D0FF)]),
-  MatchingTheme.objects: _ThemeColors(
-      card: Color(0xFFF5EEFF),
-      cardShadow: Color(0xFF6040B8),
-      matched: Color(0xFFA8D85C),
-      cardBack: [Color(0xFF9E78D8), Color(0xFFD4B8F8)]),
 };
 
 // ─────────────────────────────────────────────
@@ -174,8 +111,6 @@ class _MatchingGameAssets {
 
   static const String backgroundLandscape =
       'assets/matching/background/matching_background_landscape.webp';
-
-  static const String frog = 'assets/matching/animals/frog.webp';
 }
 
 // ============================================================================
@@ -240,16 +175,23 @@ class _MatchingGameState extends State<MatchingGame>
   final List<String> _selected = [];
   final Set<String> _matched = {};
   bool _disabled = false;
-  bool _showWrongToast = false;
+  FeedbackState _feedback = FeedbackState.none;
+  late final AnimationController _feedbackController;
+  int _messageIndex = -1;
+  int _lastCorrect = -1, _lastWrong = -1;
+  bool _finalPair = false;
+  bool _feedbackAssetsLoaded = false;
   int _lives = 5;
   bool _showWin = false;
-  Timer? _checkTimer;
   Timer? _countdownTimer;
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
+    _feedbackController = AnimationController(vsync: this)
+      ..addListener(_onFeedbackTick)
+      ..addStatusListener(_onFeedbackStatus);
     _startLevel(0);
     _initGame();
   }
@@ -266,8 +208,8 @@ class _MatchingGameState extends State<MatchingGame>
 
   @override
   void dispose() {
-    _checkTimer?.cancel();
     _countdownTimer?.cancel();
+    _feedbackController.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -275,8 +217,8 @@ class _MatchingGameState extends State<MatchingGame>
   MatchingLevel get _level => kLevels[_levelIdx.clamp(0, kLevels.length - 1)];
 
   void _startLevel(int idx) {
-    _checkTimer?.cancel();
     _countdownTimer?.cancel();
+    _feedbackController.stop();
     setState(() {
       _levelIdx = idx;
       _cards = buildCards(
@@ -288,7 +230,8 @@ class _MatchingGameState extends State<MatchingGame>
       _disabled = false;
       _lives = 5;
       _showWin = false;
-      _showWrongToast = false;
+      _feedback = FeedbackState.none;
+      _finalPair = false;
     });
     _startCountdown();
   }
@@ -311,6 +254,7 @@ class _MatchingGameState extends State<MatchingGame>
 
   void _handleCardTap(String id) {
     if (_disabled || _phase != Phase.playing) return;
+    if (_matched.contains(_cards.firstWhere((c) => c.id == id).pairId)) return;
     if (_selected.contains(id) || _selected.length >= 2) return;
 
     setState(() => _selected.add(id));
@@ -335,41 +279,113 @@ class _MatchingGameState extends State<MatchingGame>
           debugPrint('Audio file not found: $soundPath');
         });
 
-        if (_matched.length == _level.pairCount) {
-          Future.delayed(const Duration(milliseconds: 600), () {
-            if (mounted) _showLevelCompleteDialog();
-          });
-        }
-        _checkTimer = Timer(const Duration(milliseconds: 500), () {
-          if (mounted)
-            setState(() {
-              _selected.clear();
-              _disabled = false;
-              _showWrongToast = false;
-            });
-        });
+        _beginFeedback(FeedbackState.correct);
       } else {
-        setState(() {
-          _showWrongToast = true;
-          _lives--;
-        });
-        if (_lives <= 0) {
-          Future.delayed(const Duration(milliseconds: 900), () {
-            if (mounted) {
-              _startLevel(_levelIdx); // restart on game over
-            }
-          });
-        }
-        _checkTimer = Timer(const Duration(milliseconds: 900), () {
-          if (mounted)
-            setState(() {
-              _selected.clear();
-              _disabled = false;
-              _showWrongToast = false;
-            });
-        });
+        setState(() => _lives--);
+        _beginFeedback(FeedbackState.wrong);
       }
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_feedbackAssetsLoaded) {
+      _feedbackAssetsLoaded = true;
+      for (final asset in MatchingFeedbackOverlay.assets) {
+        precacheImage(AssetImage(asset), context);
+      }
+    }
+  }
+
+  void _beginFeedback(FeedbackState state) {
+    final previous = state == FeedbackState.correct ? _lastCorrect : _lastWrong;
+    final next = previous < 0
+        ? Random().nextInt(3)
+        : (previous + 1 + Random().nextInt(2)) % 3;
+    setState(() {
+      _feedback = state;
+      _messageIndex = next;
+      if (state == FeedbackState.correct) {
+        _lastCorrect = next;
+      } else {
+        _lastWrong = next;
+      }
+      _finalPair =
+          state == FeedbackState.correct && _matched.length == _level.pairCount;
+    });
+    _feedbackController.duration = Duration(
+        milliseconds: _finalPair
+            ? MatchingFeedbackConfig.finalMs
+            : state == FeedbackState.correct
+                ? MatchingFeedbackConfig.correctMs
+                : MatchingFeedbackConfig.wrongMs);
+    _feedbackController.forward(from: 0);
+  }
+
+  void _onFeedbackTick() {
+    if (_feedback == FeedbackState.wrong &&
+        _selected.isNotEmpty &&
+        _feedbackController.value * MatchingFeedbackConfig.wrongMs >=
+            MatchingFeedbackConfig.closeMs) {
+      setState(() => _selected.clear());
+    }
+  }
+
+  void _onFeedbackStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) return;
+    final restart = _feedback == FeedbackState.wrong && _lives <= 0;
+    setState(() {
+      _selected.clear();
+      _feedback = FeedbackState.none;
+      _disabled = _finalPair;
+    });
+    if (restart) {
+      _startLevel(_levelIdx);
+    } else if (_finalPair) {
+      _showLevelCompleteDialog();
+    }
+  }
+
+  Widget _buildFeedbackGrid({required bool landscape, required bool tablet}) {
+    return AnimatedBuilder(
+        animation: _feedbackController,
+        builder: (context, _) {
+          final ms = _feedbackController.value *
+              (_feedbackController.duration?.inMilliseconds ?? 0);
+          final visualMs = _finalPair
+              ? ms *
+                  MatchingFeedbackConfig.correctMs /
+                  MatchingFeedbackConfig.finalMs
+              : ms;
+          return Stack(
+              clipBehavior: Clip.none,
+              fit: StackFit.expand,
+              children: [
+                AbsorbPointer(
+                    absorbing: _disabled,
+                    child: _GameGrid(
+                      cards: _cards,
+                      onCardTap: (card) => _handleCardTap(card.id),
+                      isFaceUp: _isFaceUp,
+                      isMatched: (card) => _matched.contains(card.pairId),
+                      isLandscape: landscape,
+                      isTablet: tablet,
+                      feedback: _feedback,
+                      selected: _selected,
+                      elapsedMs: visualMs,
+                      reaction: _feedback != FeedbackState.none &&
+                              !(_feedback == FeedbackState.correct &&
+                                  visualMs >=
+                                      MatchingFeedbackConfig.spotlightStart)
+                          ? MatchingFeedbackOverlay(
+                              state: _feedback,
+                              elapsedMs: visualMs,
+                              messageIndex: _messageIndex)
+                          : null,
+                    )),
+              ]);
+        });
   }
 
   Future<void> _showLevelCompleteDialog() async {
@@ -551,14 +567,7 @@ class _MatchingGameState extends State<MatchingGame>
               horizontalPadding,
               8,
             ),
-            child: _GameGrid(
-              cards: _cards,
-              onCardTap: (card) => _handleCardTap(card.id),
-              isFaceUp: _isFaceUp,
-              isMatched: (card) => _matched.contains(card.pairId),
-              isLandscape: false,
-              isTablet: isTablet,
-            ),
+            child: _buildFeedbackGrid(landscape: false, tablet: isTablet),
           ),
         ),
 
@@ -629,14 +638,7 @@ class _MatchingGameState extends State<MatchingGame>
             padding: EdgeInsets.symmetric(
               horizontal: horizontalPadding,
             ),
-            child: _GameGrid(
-              cards: _cards,
-              onCardTap: (card) => _handleCardTap(card.id),
-              isFaceUp: _isFaceUp,
-              isMatched: (card) => _matched.contains(card.pairId),
-              isLandscape: true,
-              isTablet: height >= 600,
-            ),
+            child: _buildFeedbackGrid(landscape: true, tablet: height >= 600),
           ),
         ),
 
@@ -1034,6 +1036,10 @@ class _CountdownCircle extends StatelessWidget {
 // ============================================================================
 
 class _GameGrid extends StatelessWidget {
+  final MatchingFeedbackOverlay? reaction;
+  final FeedbackState feedback;
+  final List<String> selected;
+  final double elapsedMs;
   final List<CardState> cards;
 
   final void Function(CardState card) onCardTap;
@@ -1044,7 +1050,10 @@ class _GameGrid extends StatelessWidget {
   final bool isTablet;
 
   const _GameGrid({
-    super.key,
+    this.reaction,
+    required this.feedback,
+    required this.selected,
+    required this.elapsedMs,
     required this.cards,
     required this.onCardTap,
     required this.isFaceUp,
@@ -1055,16 +1064,57 @@ class _GameGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spotlight = feedback == FeedbackState.correct
+        ? MatchingFeedbackConfig.spotlight(elapsedMs)
+        : 0.0;
+    // Copies are visual only: every face/matched value comes from the same model.
+    final raised = spotlight > 0 || (reaction != null && selected.length == 2);
     return MatchingCardGrid(
       itemCount: cards.length,
       isTablet: isTablet,
+      foregroundBuilder: (context, rects) => IgnorePointer(
+          child: ExcludeSemantics(
+        child: Stack(clipBehavior: Clip.none, children: [
+          if (raised)
+            for (var i = 0; i < cards.length; i++)
+              if (selected.contains(cards[i].id))
+                Positioned.fromRect(
+                    rect: rects[i],
+                    child: SpotlightCard(
+                      key: ValueKey('spotlight-${cards[i].id}'),
+                      strength: spotlight,
+                      elapsedMs: elapsedMs,
+                      child: MatchedCardEffect(
+                          state: spotlight > 0 ? FeedbackState.none : feedback,
+                          elapsedMs: elapsedMs,
+                          child: _MemoryCard(
+                              card: cards[i],
+                              faceUp: isFaceUp(cards[i]),
+                              matched: isMatched(cards[i]),
+                              reactionCopy: true,
+                              onTap: () {})),
+                    )),
+          // Keep the reaction and its message above card copies at a stable centre.
+          if (reaction != null) Positioned.fill(child: reaction!),
+        ]),
+      )),
       itemBuilder: (context, index) {
         final card = cards[index];
-        return _MemoryCard(
-          card: card,
-          faceUp: isFaceUp(card),
-          matched: isMatched(card),
-          onTap: () => onCardTap(card),
+        return Opacity(
+          key: ValueKey('card-opacity-${card.id}'),
+          // Only hide the source of a foreground copy. Other cards remain
+          // opaque: fading them lets the busy background bleed through.
+          opacity: raised && selected.contains(card.id) ? 0 : 1,
+          child: MatchedCardEffect(
+              state: selected.contains(card.id) ? feedback : FeedbackState.none,
+              elapsedMs: elapsedMs,
+              child: _MemoryCard(
+                key: ValueKey('matching-card-${card.id}'),
+                card: card,
+                faceUp: isFaceUp(card),
+                matched: isMatched(card),
+                onTap: () => onCardTap(card),
+              )),
         );
       },
     );
@@ -1076,6 +1126,7 @@ class _GameGrid extends StatelessWidget {
 // ============================================================================
 
 class _MemoryCard extends StatelessWidget {
+  final bool reactionCopy;
   final CardState card;
   final bool faceUp;
   final bool matched;
@@ -1087,6 +1138,7 @@ class _MemoryCard extends StatelessWidget {
     required this.faceUp,
     required this.matched,
     required this.onTap,
+    this.reactionCopy = false,
   });
 
   @override
@@ -1097,7 +1149,7 @@ class _MemoryCard extends StatelessWidget {
         duration: const Duration(
           milliseconds: 220,
         ),
-        scale: matched ? 0.96 : 1,
+        scale: matched && !reactionCopy ? 0.96 : 1,
         child: AnimatedContainer(
           duration: const Duration(
             milliseconds: 280,
@@ -1198,7 +1250,7 @@ class _MemoryCard extends StatelessWidget {
                   fit: BoxFit.contain,
                 )
               : Text(card.emoji, style: const TextStyle(fontSize: 40)),
-          if (matched)
+          if (matched && !reactionCopy)
             Positioned(
               top: 2,
               right: 2,
@@ -1329,123 +1381,6 @@ class _BottomHint extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// WRONG TOAST
-// ============================================================================
-
-class _WrongToast extends StatefulWidget {
-  final bool show;
-  const _WrongToast({Key? key, required this.show}) : super(key: key);
-  @override
-  State<_WrongToast> createState() => _WrongToastState();
-}
-
-class _WrongToastState extends State<_WrongToast>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _scale, _opacity;
-  late Animation<Offset> _slide;
-  _WrongMsg _msg = kWrongMessages[0];
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400));
-    _ctrl.addListener(() => setState(() {}));
-    _scale = Tween(begin: 0.4, end: 1.0)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
-    _opacity = Tween(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
-    _slide = Tween(begin: const Offset(0, 0.15), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
-  }
-
-  @override
-  void didUpdateWidget(_WrongToast old) {
-    super.didUpdateWidget(old);
-    if (widget.show && !old.show) {
-      setState(
-          () => _msg = kWrongMessages[Random().nextInt(kWrongMessages.length)]);
-      _ctrl.forward(from: 0);
-    }
-    if (!widget.show && old.show) {
-      _ctrl.reverse();
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (_, child) {
-        if (_ctrl.value == 0) return const SizedBox.shrink();
-        return Opacity(
-          opacity: _opacity.value,
-          child: SlideTransition(
-            position: _slide,
-            child: ScaleTransition(scale: _scale, child: child),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFF0C0), Color(0xFFFFE08A)],
-          ),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-              color: const Color(0xFFFFFFFF).withValues(alpha: 0.8), width: 3),
-          boxShadow: const [
-            BoxShadow(color: Color(0xFFD4A000), offset: Offset(0, 6)),
-            BoxShadow(
-                color: Color(0x4DC8A000),
-                offset: Offset(0, 10),
-                blurRadius: 28),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 500),
-              builder: (_, t, child) {
-                final angle = sin(t * pi * 4) * 15 * (1 - t) * pi / 180;
-                final scale = 1.0 + sin(t * pi) * 0.3;
-                return Transform.scale(
-                  scale: scale,
-                  child: Transform.rotate(angle: angle, child: child),
-                );
-              },
-              child: Text(_msg.emoji, style: const TextStyle(fontSize: 30)),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              _msg.getText(AppLocalizations.of(context)!),
-              style: const TextStyle(
-                fontFamily: 'Baloo2 ExtraBold',
-                fontWeight: FontWeight.bold,
-                fontSize: 17,
-                color: Color(0xFF7A4800),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
