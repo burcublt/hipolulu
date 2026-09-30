@@ -47,3 +47,7 @@ app.*.map.json
 
 # Local database files, credentials and backups
 .local/
+
+# Server-only database credentials
+/backend/config/*.php
+!/backend/config/*.example.php

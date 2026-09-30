@@ -2,6 +2,7 @@ name: hippolulu-local
 services:
   db:
     image: mariadb:10.11
+    ports: ["127.0.0.1:3307:3306"]
     environment:
       MARIADB_ROOT_PASSWORD_FILE: /run/secrets/db_root
       MARIADB_DATABASE: hippolulu_dev
@@ -20,6 +21,8 @@ services:
     build: ./backend
     ports: ["127.0.0.1:8088:8080"]
     environment:
+      MEDIA_STORAGE_ROOT: /media
+      API_BASE_URL: http://127.0.0.1:8088
       DB_HOST: db
       DB_NAME: hippolulu_dev
       DB_USER: hippolulu_api
@@ -27,6 +30,7 @@ services:
     secrets: [db_app]
     volumes:
       - ./backend:/app:ro
+      - ./assets:/media/assets:ro
     depends_on:
       db:
         condition: service_healthy

@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/src/catalog.php';
+require dirname(__DIR__) . '/src/media.php';
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
@@ -15,6 +16,7 @@ try {
     }
     $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $db = database();
+    if ($path === '/v1/media') serveMedia($db);
     if ($path === '/v1/health') {
         $db->query('SELECT 1');
         reply(200, ['status' => 'ok']);
@@ -60,6 +62,6 @@ try {
     reply(404,['error'=>'not_found']);
 } catch (Throwable $e) {
     // Do not expose credentials, SQL or filesystem paths in HTTP responses.
-    error_log('Catalog API failure: '.get_class($e));
+    logCatalogFailure($e);
     reply(503,['error'=>'service_unavailable']);
 }
