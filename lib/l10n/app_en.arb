@@ -216,5 +216,11 @@
   "parentGreat": "Great!",
   "parentContinue": "You may continue.",
   "parentCancel": "Cancel",
-  "parentStoreUnavailable": "Purchases are currently unavailable. Please try again later."
+  "parentStoreUnavailable": "Purchases are currently unavailable. Please try again later.",
+  "matchingRememberTitle": "Remember the cards!",
+  "matchingFindTitle": "Find the pairs!",
+  "matchingPreviewInstruction": "They’ll flip over in a few seconds…",
+  "matchingTapInstruction": "Tap two cards to find a match!",
+  "matchingPreviewHint": "Memorize the cards!",
+  "matchingPlayHint": "Try to find all the matching pairs!"
 }

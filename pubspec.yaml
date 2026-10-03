@@ -36,6 +36,8 @@ dependencies:
   intl: any
   shared_preferences: ^2.5.3
   audioplayers: ^6.0.0
+  crypto: ^3.0.7
+  path_provider: ^2.1.6
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -95,6 +97,8 @@ flutter:
     - assets/images/matching/vehicles/
     - assets/images/puzzles/animals/
     - assets/images/puzzles/fruits/
+    - assets/images/puzzles/dinosaurs/
+    - assets/images/puzzles/underwater/
     - assets/images/puzzles/vehicles/
     - assets/images/puzzle_theme/
     - assets/voices/animals/tr/

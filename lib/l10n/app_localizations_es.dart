@@ -426,4 +426,24 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get parentStoreUnavailable =>
       'Las compras no están disponibles por ahora. Inténtalo más tarde.';
+
+  @override
+  String get matchingRememberTitle => '¡Recuerda las cartas!';
+
+  @override
+  String get matchingFindTitle => '¡Encuentra las parejas!';
+
+  @override
+  String get matchingPreviewInstruction =>
+      'Se darán la vuelta en unos segundos…';
+
+  @override
+  String get matchingTapInstruction =>
+      '¡Toca dos cartas para encontrar una pareja!';
+
+  @override
+  String get matchingPreviewHint => '¡Memoriza las cartas!';
+
+  @override
+  String get matchingPlayHint => '¡Intenta encontrar todas las parejas!';
 }

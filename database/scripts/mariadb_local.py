@@ -27,6 +27,6 @@ if a.action=='setup':
    print('Applied',name)
  sql("REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'hippolulu_api'@'%'; GRANT SELECT ON hippolulu_dev.* TO 'hippolulu_api'@'%';")
 print(sql('SELECT VERSION(); SELECT game_id,COUNT(*),SUM(locked=0) FROM themes GROUP BY game_id; SELECT COUNT(*) FROM contents;'))
-assert sql('SELECT COUNT(*) FROM contents;').strip()=='74'
+assert int(sql('SELECT COUNT(*) FROM contents;').strip())>=74
 assert sql('SELECT COUNT(*) FROM themes WHERE locked=0;').strip()=='8'
 print('MariaDB catalog verified.')

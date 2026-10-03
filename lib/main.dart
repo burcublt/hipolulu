@@ -713,34 +713,45 @@ class _GameModeCardState extends State<_GameModeCard> {
                     ),
                   ),
                   Positioned(
-                    left: 0,
-                    right: 0,
-                    top: constraints.maxHeight * 0.55,
+                    left: constraints.maxWidth * 0.08,
+                    right: constraints.maxWidth * 0.08,
+                    top: constraints.maxHeight * 0.575,
+                    height: constraints.maxHeight * 0.15,
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          mode.label,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          style: TextStyle(
-                            fontFamily: 'Baloo2 ExtraBold',
-                            fontWeight: FontWeight.bold,
-                            fontSize: constraints.maxWidth * 0.100,
-                            color: mode.textColor,
-                            letterSpacing: 0.5,
+                        Expanded(
+                          flex: 3,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              mode.label,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontFamily: 'Baloo2 ExtraBold',
+                                fontSize: constraints.maxWidth * 0.105,
+                                height: 1.1,
+                                color: const Color(0xFF4D168C),
+                              ),
+                            ),
                           ),
                         ),
-                        SizedBox(height: constraints.maxHeight * 0.003),
-                        Text(
-                          mode.sublabel,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          style: TextStyle(
-                            fontFamily: 'Baloo2 ExtraBold',
-                            fontSize: constraints.maxWidth * 0.075,
-                            fontWeight: FontWeight.w500,
-                            color: mode.textColor.withValues(alpha: 0.85),
+                        SizedBox(height: constraints.maxHeight * 0.008),
+                        Expanded(
+                          flex: 2,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              mode.sublabel,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontFamily: 'Baloo2 Bold',
+                                fontSize: constraints.maxWidth * 0.069,
+                                height: 1.15,
+                                color: const Color(0xFF4D168C),
+                              ),
+                            ),
                           ),
                         ),
                       ],

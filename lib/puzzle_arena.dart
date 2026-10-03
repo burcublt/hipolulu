@@ -1,3 +1,4 @@
+import 'catalog_service.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -434,7 +435,9 @@ class _PuzzleArenaState extends State<PuzzleArena>
   }
 
   String get _puzzleName {
-    return AppLocalizations.of(context)!.itemTitle(imageAsset);
+    return CatalogService.instance
+            .title(imageAsset, Localizations.localeOf(context).languageCode) ??
+        AppLocalizations.of(context)!.itemTitle(imageAsset);
   }
 
   @override
@@ -633,7 +636,9 @@ class _PuzzleArenaState extends State<PuzzleArena>
                           rect: boardRect,
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(16),
-                            child: Image.asset(imageAsset, fit: BoxFit.cover),
+                            child: Image(
+                                image: catalogImageProvider(imageAsset),
+                                fit: BoxFit.cover),
                           ),
                         ),
                         if (wrongFlash)
@@ -923,7 +928,9 @@ class _TrayPiece extends StatelessWidget {
                     top: -(frameH + piece.row * cellH) + overflowH,
                     width: boardW,
                     height: boardH,
-                    child: Image.asset(imageAsset, fit: BoxFit.cover),
+                    child: Image(
+                        image: catalogImageProvider(imageAsset),
+                        fit: BoxFit.cover),
                   ),
                   Positioned.fill(
                     child: Container(

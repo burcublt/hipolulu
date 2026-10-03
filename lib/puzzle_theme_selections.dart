@@ -1,3 +1,4 @@
+import 'catalog_service.dart';
 import 'package:flutter/services.dart';
 import 'unlock_screen.dart';
 import 'package:flutter/material.dart';
@@ -14,24 +15,36 @@ class ThemeSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return _ThemeSelectionLayout(
-            width: constraints.maxWidth,
-            height: constraints.maxHeight,
-          );
-        },
-      ),
-    );
+    return CatalogLoader(
+        path: 'games/puzzle/themes',
+        builder: (context, data) => Scaffold(
+              body: LayoutBuilder(
+                builder: (context, constraints) {
+                  return _ThemeSelectionLayout(
+                    width: constraints.maxWidth,
+                    height: constraints.maxHeight,
+                    themes: data
+                        .map((t) => ThemeItem(
+                            id: t['id'],
+                            titleGetter: (_) => t['title'],
+                            puzzleCount: t['content_count'],
+                            asset: t['cover_url'] ?? '',
+                            locked: t['locked']))
+                        .toList(),
+                  );
+                },
+              ),
+            ));
   }
 }
 
 class _ThemeSelectionLayout extends StatelessWidget {
+  final List<ThemeItem> themes;
   final double width;
   final double height;
 
   const _ThemeSelectionLayout({
+    required this.themes,
     required this.width,
     required this.height,
   });
@@ -137,6 +150,7 @@ class _ThemeSelectionLayout extends StatelessWidget {
                     ),
                     Expanded(
                       child: _ThemeGrid(
+                        themes: themes,
                         columns: columnCount,
                         isLandscape: isLandscape,
                         isTablet: isTablet,
@@ -356,11 +370,13 @@ class _BackButtonState extends State<_BackButton> {
 // ================================================================
 
 class _ThemeGrid extends StatelessWidget {
+  final List<ThemeItem> themes;
   final int columns;
   final bool isLandscape;
   final bool isTablet;
 
   const _ThemeGrid({
+    required this.themes,
     required this.columns,
     required this.isLandscape,
     required this.isTablet,
@@ -381,10 +397,10 @@ class _ThemeGrid extends StatelessWidget {
             isLandscape ? (isTablet ? 18 : 12) : (isTablet ? 18 : 12),
         childAspectRatio: _cardAspectRatio(),
       ),
-      itemCount: puzzleThemeItems.length,
+      itemCount: themes.length,
       itemBuilder: (context, index) {
         return ThemeCard(
-          item: puzzleThemeItems[index],
+          item: themes[index],
           isTablet: isTablet,
           isLandscape: isLandscape,
         );
@@ -548,8 +564,8 @@ class _ThemeImage extends StatelessWidget {
         borderRadius: BorderRadius.circular(
           isTablet ? 20 : 14,
         ),
-        child: Image.asset(
-          asset,
+        child: Image(
+          image: catalogImageProvider(asset),
           width: double.infinity,
           height: double.infinity,
           fit: BoxFit.cover,

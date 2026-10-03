@@ -20,6 +20,7 @@ void main() {
           child: RepaintBoundary(key: const ValueKey('capture'),child: MainMenu(onModeSelect: (_) {})))));
       await tester.runAsync(() async {
         final font=FontLoader('Baloo2 ExtraBold')..addFont(rootBundle.load('assets/fonts/Baloo2-ExtraBold.ttf')); await font.load();
+        final bold=FontLoader('Baloo2 Bold')..addFont(rootBundle.load('assets/fonts/Baloo2-Bold.ttf')); await bold.load();
         final icons=FontLoader('MaterialIcons')..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')); await icons.load();
         final context=tester.element(find.byType(MainMenu));
         await Future.wait(tester.widgetList<Image>(find.byType(Image)).map((i)=>precacheImage(i.image,context)));

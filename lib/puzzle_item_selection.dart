@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
 import 'package:hippolulu/l10n/game_l10n.dart';
 import 'main.dart';
-import 'asset_service.dart';
+import 'catalog_service.dart';
 import 'puzzle_arena.dart';
 
 // ─────────────────────────────────────────────
@@ -27,19 +27,44 @@ class PuzzleItemSelection extends StatefulWidget {
 class _PuzzleItemSelectionState extends State<PuzzleItemSelection> {
   List<String> _imagePaths = [];
 
+  bool _loading = true;
+  bool _error = false;
+  String? _locale;
   @override
-  void initState() {
-    super.initState();
-    _loadImages();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final locale = Localizations.localeOf(context).languageCode;
+    if (_locale != locale) {
+      _locale = locale;
+      _loadImages();
+    }
   }
 
-  void _loadImages() async {
-    await AssetService().load();
-    final images = AssetService().getImagesForTheme(widget.themeId);
-    if (mounted) {
-      setState(() {
-        _imagePaths = images;
-      });
+  Future<void> _loadImages() async {
+    setState(() {
+      _loading = true;
+      _error = false;
+    });
+    final locale = _locale!;
+    try {
+      final data = await CatalogService.instance
+          .fetch('games/puzzle/themes/${widget.themeId}/contents', locale);
+      final images = data.map((i) => i['image_url'] as String).toList();
+      if (!mounted || locale != _locale) return;
+      await Future.wait(images.map((url) => loadCatalogImage(url, context)));
+      if (mounted && locale == _locale) {
+        setState(() {
+          _imagePaths = images;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted && locale == _locale) {
+        setState(() {
+          _loading = false;
+          _error = true;
+        });
+      }
     }
   }
 
@@ -77,61 +102,66 @@ class _PuzzleItemSelectionState extends State<PuzzleItemSelection> {
                 // ── ITEMS GRID ──
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
-                  child: _imagePaths.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(40.0),
-                            child: Text(
-                              AppLocalizations.of(context)!.noPuzzlesFound,
-                              style: const TextStyle(
-                                fontFamily: 'Baloo2 ExtraBold',
-                                fontSize: 18,
-                                color: Color(0xFF7854B8),
-                              ),
-                            ),
-                          ),
-                        )
-                      : LayoutBuilder(
-                          builder: (context, constraints) {
-                            int crossAxisCount = constraints.maxWidth > 700
-                                ? 4
-                                : (constraints.maxWidth > 480 ? 3 : 2);
-                            double spacing = 16;
-                            double itemWidth = (constraints.maxWidth -
-                                    (spacing * (crossAxisCount - 1))) /
-                                crossAxisCount;
-                            double itemHeight = itemWidth * 1.18;
-
-                            return Wrap(
-                              spacing: spacing,
-                              runSpacing: spacing,
-                              children: List.generate(_imagePaths.length, (i) {
-                                final path = _imagePaths[i];
-                                return SizedBox(
-                                  width: itemWidth,
-                                  height: itemHeight,
-                                  child: _PuzzleItemCard(
-                                    imagePath: path,
-                                    index: i,
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (puzzleCtx) => PuzzleArena(
-                                            imagePath: path,
-                                            onBack: () =>
-                                                Navigator.of(puzzleCtx).pop(),
-                                            themeImages: _imagePaths,
-                                            currentIndex: i,
-                                          ),
-                                        ),
-                                      );
-                                    },
+                  child: _loading || _error
+                      ? CatalogStatus(error: _error, retry: _loadImages)
+                      : _imagePaths.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(40.0),
+                                child: Text(
+                                  AppLocalizations.of(context)!.noPuzzlesFound,
+                                  style: const TextStyle(
+                                    fontFamily: 'Baloo2 ExtraBold',
+                                    fontSize: 18,
+                                    color: Color(0xFF7854B8),
                                   ),
+                                ),
+                              ),
+                            )
+                          : LayoutBuilder(
+                              builder: (context, constraints) {
+                                int crossAxisCount = constraints.maxWidth > 700
+                                    ? 4
+                                    : (constraints.maxWidth > 480 ? 3 : 2);
+                                double spacing = 16;
+                                double itemWidth = (constraints.maxWidth -
+                                        (spacing * (crossAxisCount - 1))) /
+                                    crossAxisCount;
+                                double itemHeight = itemWidth * 1.18;
+
+                                return Wrap(
+                                  spacing: spacing,
+                                  runSpacing: spacing,
+                                  children:
+                                      List.generate(_imagePaths.length, (i) {
+                                    final path = _imagePaths[i];
+                                    return SizedBox(
+                                      width: itemWidth,
+                                      height: itemHeight,
+                                      child: _PuzzleItemCard(
+                                        imagePath: path,
+                                        index: i,
+                                        onTap: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (puzzleCtx) =>
+                                                  PuzzleArena(
+                                                imagePath: path,
+                                                onBack: () =>
+                                                    Navigator.of(puzzleCtx)
+                                                        .pop(),
+                                                themeImages: _imagePaths,
+                                                currentIndex: i,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  }),
                                 );
-                              }),
-                            );
-                          },
-                        ),
+                              },
+                            ),
                 ),
               ],
             ),
@@ -272,7 +302,9 @@ class _PuzzleItemCardState extends State<_PuzzleItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    final name = AppLocalizations.of(context)!.itemTitle(widget.imagePath);
+    final name = CatalogService.instance.title(
+            widget.imagePath, Localizations.localeOf(context).languageCode) ??
+        AppLocalizations.of(context)!.itemTitle(widget.imagePath);
 
     return GestureDetector(
       onTapDown: (_) => setState(() {
@@ -335,8 +367,8 @@ class _PuzzleItemCardState extends State<_PuzzleItemCard> {
                       ),
                       child: Hero(
                         tag: widget.imagePath,
-                        child: Image.asset(
-                          widget.imagePath,
+                        child: Image(
+                          image: catalogImageProvider(widget.imagePath),
                           fit: BoxFit.cover,
                         ),
                       ),

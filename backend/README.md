@@ -46,10 +46,10 @@ API şimdilik bütün veriyi küçük mevcut katalog için döndürür; katalog 
 
 ## DataGrip
 
-`python3 database/scripts/datagrip_setup.py` ayrı salt okunur kullanıcıyı oluşturur.
+`python3 database/scripts/datagrip_setup.py` yerel verileri düzenlemek için ayrı kullanıcıyı oluşturur.
 MariaDB data source: host `127.0.0.1`, port `3307`, database `hippolulu_dev`, user `hippolulu_datagrip`.
 Şifre `.local/mariadb/datagrip_password` dosyasındadır (Git dışında). Socket/SSH tunnel gerekmez.
-Docker Desktop ve compose servisleri açık olmalıdır. Kullanıcının yetkileri SELECT ve SHOW VIEW; içerik düzenleme yetkisi verilmez.
+Docker Desktop ve compose servisleri açık olmalıdır. DataGrip kullanıcısının yetkileri yalnızca hippolulu_dev veritabanında SELECT, INSERT, UPDATE, DELETE ve SHOW VIEW şeklindedir. API kullanıcısı salt okunur kalır; tablo şeması değiştirme yetkisi verilmez.
 
 ## Medya paketlerini yükleme
 
@@ -61,3 +61,15 @@ Docker Desktop ve compose servisleri açık olmalıdır. Kullanıcının yetkile
 4. `/v1/games/matching/themes/animals/contents?locale=tr` yanıtındaki image_url ve audio_url adreslerini açarak kontrol edin.
 
 Canlı URL varsayılanı `https://hippolulu-api.bodrumdublin.com`; başka ortamda `API_BASE_URL` ile değiştirilebilir. `MEDIA_STORAGE_ROOT` varsayılanı backend kökündeki storage klasörüdür. Docker bunu /media olarak ayarlar. DB_HOST ortam değişkeni verilirse otomatik production.php yüklenmez; açık APP_CONFIG_FILE her zaman önceliklidir.
+
+## 2 Ekim katalog güncellemesi
+
+Yerel katalog: 115 içerik, 345 içerik çevirisi (tr/en/es), 198 medya dosyası.
+`database/scripts/build_catalog_update.py` dosya envanterinden ek seed üretir; önceden uygulanmış seed dosyalarını yeniden üretmeyin. Yeni değişikliklerde yeni numaralı seed kullanın.
+`database/scripts/export_catalog.py` iki çıktı üretir:
+- `build/deploy/hippolulu-catalog-update.sql`: Mevcut 001–003 kurulumu üzerine uygulanır; kayıtları silmez. Önce canlı veritabanını dışa aktararak yedekleyin.
+- `build/deploy/hippolulu-catalog-full.sql`: Yalnızca boş veritabanına aktarılacak tam kopya. Mevcut dolu veritabanına uygulanmaz.
+
+Canlı güncelleme sırası: storage ZIP yükle/çıkar, mevcut veritabanında update SQL içe aktar, API kontrolü. SQL dosyalarını public klasörüne yüklemeyin.
+Tüm sesler envanterdedir; alternatif `_2` kayıtları, görseli olmayan panda/crocodile ve yanlış klasördeki `vegetables/en/avacado.mp3` otomatik eşleştirilmez. Bu sesin içeriği dinlenerek doğrulanmalıdır. Türkçe/İspanyolca ses dosyaları bulunmayan içeriklerde audio_url null kalır; metin çevirisi ses üretmez.
+Flutter hâlâ yerel asset kullanır; API entegrasyonu ayrı sonraki adımdır. Yeni puzzle klasörleri pubspec.yaml'a eklenmiştir.

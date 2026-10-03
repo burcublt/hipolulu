@@ -1,3 +1,5 @@
+import 'l10n/app_localizations.dart';
+import 'catalog_service.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -122,9 +124,12 @@ enum Phase { preview, playing, won }
 // ─────────────────────────────────────────────
 //  HELPERS
 // ─────────────────────────────────────────────
-List<CardState> buildCards(MatchingTheme theme, int pairs) {
+List<CardState> buildCards(MatchingTheme theme, int pairs,
+    {List<String>? remoteImages}) {
   List<String> pool;
-  if (theme == MatchingTheme.objects) {
+  if (remoteImages != null) {
+    pool = List.from(remoteImages);
+  } else if (theme == MatchingTheme.objects) {
     pool = List.from(kThemeEmojis[MatchingTheme.objects]!);
   } else {
     final images = AssetService().getMatchingImages(theme.name);
@@ -158,9 +163,11 @@ int calcStars(int moves, int pairs) {
 // ─────────────────────────────────────────────
 class MatchingGame extends StatefulWidget {
   final MatchingTheme theme;
+  final String? themeId;
   final VoidCallback onBack;
 
-  const MatchingGame({super.key, required this.theme, required this.onBack});
+  const MatchingGame(
+      {super.key, required this.theme, this.themeId, required this.onBack});
 
   @override
   State<MatchingGame> createState() => _MatchingGameState();
@@ -192,17 +199,55 @@ class _MatchingGameState extends State<MatchingGame>
     _feedbackController = AnimationController(vsync: this)
       ..addListener(_onFeedbackTick)
       ..addStatusListener(_onFeedbackStatus);
-    _startLevel(0);
-    _initGame();
   }
 
-  void _initGame() async {
-    await AssetService().load();
-    if (mounted) {
+  List<String> _remoteImages = [];
+  bool _loading = true, _loadError = false;
+  String? _locale;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_feedbackAssetsLoaded) {
+      _feedbackAssetsLoaded = true;
+      for (final asset in MatchingFeedbackOverlay.assets) {
+        precacheImage(AssetImage(asset), context);
+      }
+    }
+    final locale = Localizations.localeOf(context).languageCode;
+    if (_locale != locale) {
+      _locale = locale;
+      _initGame();
+    }
+  }
+
+  Future<void> _initGame() async {
+    _countdownTimer?.cancel();
+    setState(() {
+      _loading = true;
+      _loadError = false;
+    });
+    final locale = _locale!;
+    try {
+      final items = await CatalogService.instance.fetch(
+          'games/matching/themes/${Uri.encodeComponent(widget.themeId ?? widget.theme.name)}/contents',
+          locale);
+      final images = items.map((i) => i['image_url'] as String).toList();
+      if (images.isEmpty) throw StateError('Empty theme');
+      if (!mounted || _locale != locale) return;
+      await Future.wait(images.map((url) => loadCatalogImage(url, context)));
+      if (!mounted || _locale != locale) return;
+      _remoteImages = images;
       setState(() {
-        _cards = buildCards(widget.theme,
-            kLevels[_levelIdx.clamp(0, kLevels.length - 1)].pairCount);
+        _loading = false;
       });
+      _startLevel(0);
+    } catch (_) {
+      if (mounted && _locale == locale) {
+        setState(() {
+          _loading = false;
+          _loadError = true;
+        });
+      }
     }
   }
 
@@ -214,7 +259,14 @@ class _MatchingGameState extends State<MatchingGame>
     super.dispose();
   }
 
-  MatchingLevel get _level => kLevels[_levelIdx.clamp(0, kLevels.length - 1)];
+  MatchingLevel get _level {
+    final level = kLevels[_levelIdx.clamp(0, kLevels.length - 1)];
+    return MatchingLevel(
+        level: level.level,
+        pairCount: min(level.pairCount, _remoteImages.length),
+        previewSeconds: level.previewSeconds,
+        completeCharacter: level.completeCharacter);
+  }
 
   void _startLevel(int idx) {
     _countdownTimer?.cancel();
@@ -222,7 +274,8 @@ class _MatchingGameState extends State<MatchingGame>
     setState(() {
       _levelIdx = idx;
       _cards = buildCards(
-          widget.theme, kLevels[idx.clamp(0, kLevels.length - 1)].pairCount);
+          widget.theme, kLevels[idx.clamp(0, kLevels.length - 1)].pairCount,
+          remoteImages: _remoteImages);
       _phase = Phase.preview;
       _countdown = kLevels[idx.clamp(0, kLevels.length - 1)].previewSeconds;
       _selected.clear();
@@ -271,29 +324,15 @@ class _MatchingGameState extends State<MatchingGame>
 
         // Dinamik ses çalma
         final langCode = Localizations.localeOf(context).languageCode;
-        final themeFolder = widget.theme.name;
-        final itemName = a.emoji.split('/').last.split('.').first;
-        final soundPath = 'voices/$themeFolder/$langCode/$itemName.mp3';
-
-        _audioPlayer.play(AssetSource(soundPath)).catchError((e) {
-          debugPrint('Audio file not found: $soundPath');
-        });
+        final soundUrl = CatalogService.instance.audio(a.emoji, langCode);
+        if (soundUrl != null) {
+          _audioPlayer.play(UrlSource(soundUrl)).catchError((Object _) {});
+        }
 
         _beginFeedback(FeedbackState.correct);
       } else {
         setState(() => _lives--);
         _beginFeedback(FeedbackState.wrong);
-      }
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_feedbackAssetsLoaded) {
-      _feedbackAssetsLoaded = true;
-      for (final asset in MatchingFeedbackOverlay.assets) {
-        precacheImage(AssetImage(asset), context);
       }
     }
   }
@@ -434,6 +473,11 @@ class _MatchingGameState extends State<MatchingGame>
 
   @override
   Widget build(BuildContext context) {
+    if (_loading || _loadError) {
+      return Scaffold(
+          appBar: AppBar(),
+          body: CatalogStatus(error: _loadError, retry: _initGame));
+    }
     return Scaffold(
       body: Stack(
         children: [
@@ -699,7 +743,7 @@ class _BackButton extends StatelessWidget {
         onTap: () {
           Navigator.maybePop(context);
         },
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: 14,
             vertical: 10,
@@ -714,7 +758,7 @@ class _BackButton extends StatelessWidget {
               ),
               SizedBox(width: 5),
               Text(
-                'Back',
+                AppLocalizations.of(context)!.back,
                 style: TextStyle(
                   color: Color(0xFF6127C9),
                   fontSize: 17,
@@ -758,7 +802,7 @@ class _LevelBadge extends StatelessWidget {
             ),
             const SizedBox(width: 5),
             Text(
-              'Level $level',
+              AppLocalizations.of(context)!.levelLabel(level),
               style: const TextStyle(
                 color: Color(0xFF6630C5),
                 fontWeight: FontWeight.w900,
@@ -930,7 +974,7 @@ class _GameStatusPanel extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    memorizing ? 'Remember the cards!' : 'Find the pairs!',
+                    memorizing ? AppLocalizations.of(context)!.matchingRememberTitle : AppLocalizations.of(context)!.matchingFindTitle,
                     maxLines: 1,
                     style: TextStyle(
                       color: const Color(
@@ -944,8 +988,8 @@ class _GameStatusPanel extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   memorizing
-                      ? "They'll flip over in a few seconds..."
-                      : 'Tap two cards to find a match!',
+                      ? AppLocalizations.of(context)!.matchingPreviewInstruction
+                      : AppLocalizations.of(context)!.matchingTapInstruction,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1240,13 +1284,18 @@ class _MemoryCard extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          card.emoji.endsWith('.webp') || card.emoji.endsWith('.png')
-              ? Image.asset(
-                  card.emoji.startsWith('assets/')
+          card.emoji.startsWith('https://') ||
+                  card.emoji.startsWith('http://') ||
+                  card.emoji.endsWith('.webp') ||
+                  card.emoji.endsWith('.png')
+              ? Image(
+                  image: catalogImageProvider(card.emoji.startsWith('http')
                       ? card.emoji
-                      : (card.emoji.startsWith('matching/')
-                          ? 'assets/images/${card.emoji}'
-                          : 'assets/images/matching/${card.emoji}'),
+                      : card.emoji.startsWith('assets/')
+                          ? card.emoji
+                          : (card.emoji.startsWith('matching/')
+                              ? 'assets/images/${card.emoji}'
+                              : 'assets/images/matching/${card.emoji}')),
                   fit: BoxFit.contain,
                 )
               : Text(card.emoji, style: const TextStyle(fontSize: 40)),
@@ -1366,8 +1415,8 @@ class _BottomHint extends StatelessWidget {
           Flexible(
             child: Text(
               memorizing
-                  ? 'Memorize the cards!'
-                  : 'Try to find all the matching pairs!',
+                  ? AppLocalizations.of(context)!.matchingPreviewHint
+                  : AppLocalizations.of(context)!.matchingPlayHint,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,

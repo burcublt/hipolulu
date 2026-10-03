@@ -428,4 +428,22 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get parentStoreUnavailable =>
       'Satın alma şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.';
+
+  @override
+  String get matchingRememberTitle => 'Kartları aklında tut!';
+
+  @override
+  String get matchingFindTitle => 'Eşleri bul!';
+
+  @override
+  String get matchingPreviewInstruction => 'Birkaç saniye sonra kapanacaklar…';
+
+  @override
+  String get matchingTapInstruction => 'Eşini bulmak için iki karta dokun!';
+
+  @override
+  String get matchingPreviewHint => 'Kartları aklında tut!';
+
+  @override
+  String get matchingPlayHint => 'Tüm eşleşen çiftleri bulmaya çalış!';
 }

@@ -891,6 +891,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Purchases are currently unavailable. Please try again later.'**
   String get parentStoreUnavailable;
+
+  /// No description provided for @matchingRememberTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember the cards!'**
+  String get matchingRememberTitle;
+
+  /// No description provided for @matchingFindTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the pairs!'**
+  String get matchingFindTitle;
+
+  /// No description provided for @matchingPreviewInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'They’ll flip over in a few seconds…'**
+  String get matchingPreviewInstruction;
+
+  /// No description provided for @matchingTapInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap two cards to find a match!'**
+  String get matchingTapInstruction;
+
+  /// No description provided for @matchingPreviewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Memorize the cards!'**
+  String get matchingPreviewHint;
+
+  /// No description provided for @matchingPlayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Try to find all the matching pairs!'**
+  String get matchingPlayHint;
 }
 
 class _AppLocalizationsDelegate

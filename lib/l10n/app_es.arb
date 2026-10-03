@@ -131,5 +131,11 @@
   "parentGreat": "¡Genial!",
   "parentContinue": "Puedes continuar.",
   "parentCancel": "Cancelar",
-  "parentStoreUnavailable": "Las compras no están disponibles por ahora. Inténtalo más tarde."
+  "parentStoreUnavailable": "Las compras no están disponibles por ahora. Inténtalo más tarde.",
+  "matchingRememberTitle": "¡Recuerda las cartas!",
+  "matchingFindTitle": "¡Encuentra las parejas!",
+  "matchingPreviewInstruction": "Se darán la vuelta en unos segundos…",
+  "matchingTapInstruction": "¡Toca dos cartas para encontrar una pareja!",
+  "matchingPreviewHint": "¡Memoriza las cartas!",
+  "matchingPlayHint": "¡Intenta encontrar todas las parejas!"
 }
