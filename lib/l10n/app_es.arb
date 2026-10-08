@@ -137,5 +137,7 @@
   "matchingPreviewInstruction": "Se darán la vuelta en unos segundos…",
   "matchingTapInstruction": "¡Toca dos cartas para encontrar una pareja!",
   "matchingPreviewHint": "¡Memoriza las cartas!",
-  "matchingPlayHint": "¡Intenta encontrar todas las parejas!"
+  "matchingPlayHint": "¡Intenta encontrar todas las parejas!",
+  "puzzleImageLoadError": "No se pudo cargar la imagen. Inténtalo de nuevo.",
+  "puzzleNewPuzzle": "Nuevo puzle"
 }

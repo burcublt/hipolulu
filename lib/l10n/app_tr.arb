@@ -137,5 +137,7 @@
   "matchingPreviewInstruction": "Birkaç saniye sonra kapanacaklar…",
   "matchingTapInstruction": "Eşini bulmak için iki karta dokun!",
   "matchingPreviewHint": "Kartları aklında tut!",
-  "matchingPlayHint": "Tüm eşleşen çiftleri bulmaya çalış!"
+  "matchingPlayHint": "Tüm eşleşen çiftleri bulmaya çalış!",
+  "puzzleImageLoadError": "Görsel yüklenemedi. Lütfen tekrar dene.",
+  "puzzleNewPuzzle": "Yeni Puzzle"
 }

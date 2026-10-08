@@ -10,6 +10,25 @@ import 'package:hippolulu/puzzle_placement_effect.dart';
 import 'package:hippolulu/puzzle_arena_layout.dart';
 
 void main() {
+  test(
+      'Board and piece homes preserve portrait, square and landscape source ratios',
+      () {
+    for (final aspect in [0.5, 0.75, 1.0, 1.5, 2.0]) {
+      for (final size in [const Size(667, 375), const Size(1180, 820)]) {
+        final layout =
+            PuzzleArenaLayout.fit(size, 12, 4, 3, imageAspect: aspect);
+        expect(layout.board.width / layout.board.height,
+            closeTo(aspect, 0.000001));
+        for (final home in layout.homes) {
+          expect(home.width / home.height, closeTo(aspect * 4 / 3, 0.000001));
+          expect((Offset.zero & size).contains(home.topLeft), isTrue);
+          expect((Offset.zero & size).contains(home.bottomRight), isTrue);
+          expect(home.overlaps(layout.board), isFalse);
+        }
+      }
+    }
+  });
+
   testWidgets('Portrait hides the game and requests landscape until exit',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(430, 932));
@@ -67,7 +86,11 @@ void main() {
     }
   }
 
-  for (final size in [const Size(667, 375), const Size(932, 430)]) {
+  for (final size in [
+    const Size(667, 375),
+    const Size(932, 430),
+    const Size(1180, 820)
+  ]) {
     testWidgets('Puzzle drags, progress and all pieces fit $size',
         (tester) async {
       await tester.binding.setSurfaceSize(size);
@@ -104,6 +127,8 @@ void main() {
         debugDisableShadows = false;
         final context = tester.element(find.byType(PuzzleArena));
         for (final asset in [
+          'assets/puzzle/level_complete/replay_icon.webp',
+          'assets/puzzle/level_complete/play_icon.webp',
           'assets/images/puzzles/animals/bear.webp',
           'assets/images/puzzle_theme/background_theme.webp',
           'assets/images/puzzle_theme/background_theme_landscape.webp',
@@ -122,7 +147,7 @@ void main() {
           await precacheImage(AssetImage(asset), context);
         }
       });
-      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pump(const Duration(milliseconds: 2700));
       await tester.pump(const Duration(milliseconds: 1700));
       await tester.pump();
       expect(find.byType(Draggable<String>), findsNWidgets(12));
@@ -175,6 +200,8 @@ void main() {
           ..createSync(recursive: true);
         File('${directory.path}/${size.width < size.height ? "portrait" : "landscape"}.png')
             .writeAsBytesSync(bytes!.buffer.asUint8List());
+        File('build/puzzle_preview/win_${size.width.toInt()}x${size.height.toInt()}.png')
+            .writeAsBytesSync(bytes.buffer.asUint8List());
         image.dispose();
       });
       await tester.pump(const Duration(milliseconds: 231));
@@ -200,6 +227,8 @@ void main() {
         await tester.pump();
         expect(find.byType(Draggable<String>), findsNWidgets(before - 1));
       }
+      final frameBeforeCompletion =
+          tester.getRect(find.byKey(const ValueKey('puzzle-stable-frame')));
       await tester.pump(const Duration(milliseconds: 450));
       final beforeFinish =
           AppLocalizations.of(tester.element(find.byType(PuzzleArena)))!;
@@ -210,8 +239,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1100));
       final l10n =
           AppLocalizations.of(tester.element(find.byType(PuzzleArena)))!;
+      expect(find.text(l10n.playAgain), findsNothing);
+      await tester.pump(const Duration(milliseconds: 1600));
       expect(find.text(l10n.playAgain), findsOneWidget);
       expect(find.text(l10n.back), findsWidgets);
+      expect(tester.getRect(find.byKey(const ValueKey('puzzle-stable-frame'))),
+          frameBeforeCompletion);
       await tester.runAsync(() async {
         final boundary = boundaryKey.currentContext!.findRenderObject()!
             as RenderRepaintBoundary;
@@ -219,13 +252,14 @@ void main() {
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
         File('build/puzzle_preview/win_${size.width < size.height ? "portrait" : "landscape"}.png')
             .writeAsBytesSync(bytes!.buffer.asUint8List());
+        File('build/puzzle_preview/win_${size.width.toInt()}x${size.height.toInt()}.png')
+            .writeAsBytesSync(bytes.buffer.asUint8List());
         image.dispose();
       });
-      await tester.tap(find.text('Diğer Oyuna Geç'));
-      expect(nextCalls, 1);
+      expect(nextCalls, 0);
       await tester.tap(find.text(l10n.playAgain));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pump(const Duration(milliseconds: 2700));
       await tester.pump(const Duration(milliseconds: 1700));
       expect(find.text('0/12'), findsOneWidget);
       expect(find.byType(Draggable<String>), findsNWidgets(12));

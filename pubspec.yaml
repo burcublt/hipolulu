@@ -87,6 +87,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
     - assets/images/
     - assets/splash/
+    - assets/images/puzzle/item_selection/
     - assets/cards/
     - assets/images/hippo.png
     - assets/images/splash.png
@@ -120,6 +121,7 @@ flutter:
     - assets/matching/ui/
     - assets/matching/themes/
     - assets/matching/level_complete/
+    - assets/audio/puzzle/
     - assets/puzzle/level_complete/
     - assets/splash/new/
 

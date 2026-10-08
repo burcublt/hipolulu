@@ -446,4 +446,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get matchingPlayHint => 'Tüm eşleşen çiftleri bulmaya çalış!';
+
+  @override
+  String get puzzleImageLoadError => 'Görsel yüklenemedi. Lütfen tekrar dene.';
+
+  @override
+  String get puzzleNewPuzzle => 'Yeni Puzzle';
 }

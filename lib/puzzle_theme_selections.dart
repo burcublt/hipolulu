@@ -17,6 +17,19 @@ class ThemeSelectionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return CatalogLoader(
         path: 'games/puzzle/themes',
+        loadingBuilder: (context, error, retry) => Scaffold(
+              backgroundColor: const Color(0xFF87CFF0),
+              body: LayoutBuilder(
+                  builder: (context, constraints) => _ThemeSelectionLayout(
+                        width: constraints.maxWidth,
+                        height: constraints.maxHeight,
+                        themes: const [],
+                        loading: !error,
+                        status: error
+                            ? CatalogStatus(error: true, retry: retry)
+                            : null,
+                      )),
+            ),
         builder: (context, data) => Scaffold(
               body: LayoutBuilder(
                 builder: (context, constraints) {
@@ -40,10 +53,14 @@ class ThemeSelectionScreen extends StatelessWidget {
 
 class _ThemeSelectionLayout extends StatelessWidget {
   final List<ThemeItem> themes;
+  final bool loading;
+  final Widget? status;
   final double width;
   final double height;
 
   const _ThemeSelectionLayout({
+    this.loading = false,
+    this.status,
     required this.themes,
     required this.width,
     required this.height,
@@ -149,12 +166,31 @@ class _ThemeSelectionLayout extends StatelessWidget {
                           : (isTablet ? 24 : 14),
                     ),
                     Expanded(
-                      child: _ThemeGrid(
-                        themes: themes,
-                        columns: columnCount,
-                        isLandscape: isLandscape,
-                        isTablet: isTablet,
-                      ),
+                      child: status ??
+                          (loading
+                              ? GridView.builder(
+                                  itemCount: 6,
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: columnCount,
+                                          crossAxisSpacing: 16,
+                                          mainAxisSpacing: 16,
+                                          childAspectRatio: 0.9),
+                                  itemBuilder: (_, index) => DecoratedBox(
+                                    decoration: BoxDecoration(
+                                        color: const Color(0xDDFFF3D8),
+                                        borderRadius:
+                                            BorderRadius.circular(24)),
+                                    child: const Center(
+                                        child: CircularProgressIndicator()),
+                                  ),
+                                )
+                              : _ThemeGrid(
+                                  themes: themes,
+                                  columns: columnCount,
+                                  isLandscape: isLandscape,
+                                  isTablet: isTablet,
+                                )),
                     ),
                   ],
                 ),
@@ -565,7 +601,8 @@ class _ThemeImage extends StatelessWidget {
           isTablet ? 20 : 14,
         ),
         child: Image(
-          image: catalogImageProvider(asset),
+ frameBuilder: catalogImageFrame,
+ image: catalogImageProvider(asset),
           width: double.infinity,
           height: double.infinity,
           fit: BoxFit.cover,

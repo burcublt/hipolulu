@@ -81,143 +81,158 @@ class MatchingThemeSelectionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return CatalogLoader(
         path: 'games/matching/themes',
-        builder: (context, data) {
-          final themes = data
-              .map((t) => MatchingThemeData(
-                  id: t['id'],
-                  title: t['title'],
-                  imagePath: t['cover_url'] ?? '',
-                  color: matchingThemeColor(t['id']),
-                  locked: t['locked']))
-              .toList();
-          return Scaffold(
-            backgroundColor: const Color(0xFFEAF7FF),
-            body: Stack(
-              children: [
-                // ==================================================================
-                // BACKGROUND
-                // ==================================================================
+        loadingBuilder: (context, error, retry) => _buildCatalog(
+            context, const [],
+            loading: !error,
+            status: error ? CatalogStatus(error: true, retry: retry) : null),
+        builder: (context, data) => _buildCatalog(context, data));
+  }
 
-                Positioned.fill(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final bool isLandscape =
-                          constraints.maxWidth > constraints.maxHeight;
+  Widget _buildCatalog(BuildContext context, List<Map<String, dynamic>> data,
+      {bool loading = false, Widget? status}) {
+    final themes = data
+        .map((t) => MatchingThemeData(
+            id: t['id'],
+            title: t['title'],
+            imagePath: t['cover_url'] ?? '',
+            color: matchingThemeColor(t['id']),
+            locked: t['locked']))
+        .toList();
+    return Scaffold(
+      backgroundColor: const Color(0xFFEAF7FF),
+      body: Stack(
+        children: [
+          // ==================================================================
+          // BACKGROUND
+          // ==================================================================
 
-                      return Image.asset(
-                        isLandscape
-                            ? _MatchingAssets.backgroundLandscape
-                            : _MatchingAssets.backgroundPortrait,
-                        fit: BoxFit.cover,
-                        alignment: Alignment.center,
-                      );
-                    },
-                  ),
-                ),
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bool isLandscape =
+                    constraints.maxWidth > constraints.maxHeight;
 
-                // Background'un kartlarla fazla karışmasını engelleyen
-                // çok hafif beyaz overlay.
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Container(
-                      color: Colors.white.withValues(alpha: 0.04),
+                return Image.asset(
+                  isLandscape
+                      ? _MatchingAssets.backgroundLandscape
+                      : _MatchingAssets.backgroundPortrait,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                );
+              },
+            ),
+          ),
+
+          // Background'un kartlarla fazla karışmasını engelleyen
+          // çok hafif beyaz overlay.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                color: Colors.white.withValues(alpha: 0.04),
+              ),
+            ),
+          ),
+
+          // ==================================================================
+          // PAGE
+          // ==================================================================
+
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (
+                BuildContext context,
+                BoxConstraints constraints,
+              ) {
+                final double width = constraints.maxWidth;
+                final double height = constraints.maxHeight;
+
+                final bool isLandscape = width > height;
+
+                final int columnCount = _getColumnCount(
+                  width,
+                  isLandscape,
+                );
+
+                final double spacing = _getGridSpacing(width);
+
+                return CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    // ========================================================
+                    // HEADER AREA
+                    // ========================================================
+
+                    SliverToBoxAdapter(
+                      child: _TopSection(
+                        width: width,
+                        isLandscape: isLandscape,
+                      ),
                     ),
-                  ),
-                ),
 
-                // ==================================================================
-                // PAGE
-                // ==================================================================
+                    // ========================================================
+                    // THEMES GRID
+                    // ========================================================
 
-                SafeArea(
-                  child: LayoutBuilder(
-                    builder: (
-                      BuildContext context,
-                      BoxConstraints constraints,
-                    ) {
-                      final double width = constraints.maxWidth;
-                      final double height = constraints.maxHeight;
+                    if (status != null)
+                      SliverFillRemaining(hasScrollBody: false, child: status)
+                    else
+                      SliverPadding(
+                        padding: _getGridPadding(
+                          width,
+                          isLandscape,
+                        ),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: columnCount,
+                            crossAxisSpacing: spacing,
+                            mainAxisSpacing: spacing,
 
-                      final bool isLandscape = width > height;
-
-                      final int columnCount = _getColumnCount(
-                        width,
-                        isLandscape,
-                      );
-
-                      final double spacing = _getGridSpacing(width);
-
-                      return CustomScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        slivers: [
-                          // ========================================================
-                          // HEADER AREA
-                          // ========================================================
-
-                          SliverToBoxAdapter(
-                            child: _TopSection(
-                              width: width,
-                              isLandscape: isLandscape,
-                            ),
+                            // 1.0'a yakın olduğu için kartlar
+                            // kare / oyuncak kutusu görünümünde.
+                            childAspectRatio: 0.98,
                           ),
+                          delegate: SliverChildBuilderDelegate(
+                            (
+                              BuildContext context,
+                              int index,
+                            ) {
+                              if (loading) {
+                                return ClipRRect(
+                                    borderRadius: BorderRadius.circular(24),
+                                    child: const CatalogPlaceholder());
+                              }
+                              final MatchingThemeData theme = themes[index];
 
-                          // ========================================================
-                          // THEMES GRID
-                          // ========================================================
-
-                          SliverPadding(
-                            padding: _getGridPadding(
-                              width,
-                              isLandscape,
-                            ),
-                            sliver: SliverGrid(
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: columnCount,
-                                crossAxisSpacing: spacing,
-                                mainAxisSpacing: spacing,
-
-                                // 1.0'a yakın olduğu için kartlar
-                                // kare / oyuncak kutusu görünümünde.
-                                childAspectRatio: 0.98,
-                              ),
-                              delegate: SliverChildBuilderDelegate(
-                                (
-                                  BuildContext context,
-                                  int index,
-                                ) {
-                                  final MatchingThemeData theme = themes[index];
-
-                                  return _MatchingThemeCard(
-                                    theme: theme,
-                                    onTap: () {
-                                      _onThemeSelected(
-                                        context,
-                                        theme,
-                                      );
-                                    },
+                              return _MatchingThemeCard(
+                                theme: theme,
+                                onTap: () {
+                                  _onThemeSelected(
+                                    context,
+                                    theme,
                                   );
                                 },
-                                childCount: themes.length,
-                              ),
-                            ),
+                              );
+                            },
+                            childCount: loading ? 6 : themes.length,
                           ),
+                        ),
+                      ),
 
-                          // Bottom safe space
-                          const SliverToBoxAdapter(
-                            child: SizedBox(
-                              height: 32,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ],
+                    // Bottom safe space
+                    const SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 32,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-          );
-        });
+          ),
+        ],
+      ),
+    );
   }
 
   // ==========================================================================
@@ -690,6 +705,7 @@ class _MatchingThemeCard extends StatelessWidget {
                                 size: cardWidth * 0.45,
                                 color: const Color(0xFFDE9449))
                             : Image(
+                                frameBuilder: catalogImageFrame,
                                 image: catalogImageProvider(theme.imagePath),
                                 width: double.infinity,
                                 fit: BoxFit.contain,

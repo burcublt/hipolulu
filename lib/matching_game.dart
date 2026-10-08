@@ -475,8 +475,39 @@ class _MatchingGameState extends State<MatchingGame>
   Widget build(BuildContext context) {
     if (_loading || _loadError) {
       return Scaffold(
-          appBar: AppBar(),
-          body: CatalogStatus(error: _loadError, retry: _initGame));
+          backgroundColor: const Color(0xFF87CFF0),
+          body: Stack(children: [
+            Positioned.fill(
+                child: Image.asset(
+                    MediaQuery.sizeOf(context).width >
+                            MediaQuery.sizeOf(context).height
+                        ? _MatchingGameAssets.backgroundLandscape
+                        : _MatchingGameAssets.backgroundPortrait,
+                    fit: BoxFit.cover)),
+            SafeArea(
+                child: Column(children: [
+              Align(
+                  alignment: Alignment.centerLeft,
+                  child:
+                      BackButton(onPressed: () => Navigator.of(context).pop())),
+              Expanded(
+                  child: _loadError
+                      ? CatalogStatus(error: true, retry: _initGame)
+                      : Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: GridView.count(
+                            crossAxisCount:
+                                MediaQuery.sizeOf(context).width > 600 ? 4 : 3,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            children: List.generate(
+                                6,
+                                (_) => ClipRRect(
+                                    borderRadius: BorderRadius.circular(18),
+                                    child: const CatalogPlaceholder())),
+                          ))),
+            ])),
+          ]));
     }
     return Scaffold(
       body: Stack(
@@ -952,14 +983,10 @@ class _GameStatusPanel extends StatelessWidget {
           // ICON
           // ------------------------------------------------------
 
-          Text(
-            memorizing ? '👀' : '✨',
-            style: TextStyle(
-              fontSize: compact ? 32 : 40,
-            ),
-          ),
-
-          const SizedBox(width: 10),
+          if (!memorizing) ...[
+            Text('✨', style: TextStyle(fontSize: compact ? 32 : 40)),
+            const SizedBox(width: 10),
+          ],
 
           // ------------------------------------------------------
           // TEXT
@@ -967,14 +994,16 @@ class _GameStatusPanel extends StatelessWidget {
 
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
                 FittedBox(
                   fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
+                  alignment: Alignment.center,
                   child: Text(
-                    memorizing ? AppLocalizations.of(context)!.matchingRememberTitle : AppLocalizations.of(context)!.matchingFindTitle,
+                    memorizing
+                        ? AppLocalizations.of(context)!.matchingRememberTitle
+                        : AppLocalizations.of(context)!.matchingFindTitle,
                     maxLines: 1,
                     style: TextStyle(
                       color: const Color(
@@ -986,18 +1015,22 @@ class _GameStatusPanel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  memorizing
-                      ? AppLocalizations.of(context)!.matchingPreviewInstruction
-                      : AppLocalizations.of(context)!.matchingTapInstruction,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: const Color(
-                      0xFF30207D,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: Text(
+                    memorizing
+                        ? AppLocalizations.of(context)!
+                            .matchingPreviewInstruction
+                        : AppLocalizations.of(context)!.matchingTapInstruction,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: const Color(
+                        0xFF30207D,
+                      ),
+                      fontSize: compact ? 11 : 14,
+                      fontWeight: FontWeight.w700,
                     ),
-                    fontSize: compact ? 11 : 14,
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -1289,6 +1322,7 @@ class _MemoryCard extends StatelessWidget {
                   card.emoji.endsWith('.webp') ||
                   card.emoji.endsWith('.png')
               ? Image(
+                  frameBuilder: catalogImageFrame,
                   image: catalogImageProvider(card.emoji.startsWith('http')
                       ? card.emoji
                       : card.emoji.startsWith('assets/')

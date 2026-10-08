@@ -446,4 +446,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get matchingPlayHint => '¡Intenta encontrar todas las parejas!';
+
+  @override
+  String get puzzleImageLoadError =>
+      'No se pudo cargar la imagen. Inténtalo de nuevo.';
+
+  @override
+  String get puzzleNewPuzzle => 'Nuevo puzle';
 }

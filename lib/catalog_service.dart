@@ -17,7 +17,8 @@ class CatalogService {
     final key = '$locale:$path';
     final cached = _responses[key];
     if (cached != null &&
-        DateTime.now().difference(cached.created) < const Duration(minutes: 5)) {
+        DateTime.now().difference(cached.created) <
+            const Duration(minutes: 5)) {
       return cached.data;
     }
     return _pending.putIfAbsent(
@@ -25,7 +26,9 @@ class CatalogService {
         () => _fetch(path, locale).then((data) {
               _responses[key] = _CatalogResponse(DateTime.now(), data);
               return data;
-            }).whenComplete(() { _pending.remove(key); }));
+            }).whenComplete(() {
+              _pending.remove(key);
+            }));
   }
 
   Future<List<Map<String, dynamic>>> _fetch(String path, String locale) async {
@@ -71,8 +74,13 @@ ImageProvider catalogImageProvider(String path) =>
 
 class CatalogLoader extends StatefulWidget {
   final String path;
+  final Widget Function(BuildContext, bool, VoidCallback)? loadingBuilder;
   final Widget Function(BuildContext, List<Map<String, dynamic>>) builder;
-  const CatalogLoader({super.key, required this.path, required this.builder});
+  const CatalogLoader(
+      {super.key,
+      required this.path,
+      required this.builder,
+      this.loadingBuilder});
   @override
   State<CatalogLoader> createState() => _CatalogLoaderState();
 }
@@ -108,6 +116,10 @@ class _CatalogLoaderState extends State<CatalogLoader> {
           if (snapshot.connectionState == ConnectionState.done &&
               snapshot.hasData) {
             return widget.builder(context, snapshot.data!);
+          }
+          if (widget.loadingBuilder != null) {
+            return widget.loadingBuilder!(
+                context, snapshot.hasError, () => setState(_load));
           }
           return Scaffold(
               appBar: AppBar(),
@@ -172,4 +184,21 @@ class _CatalogResponse {
   final DateTime created;
   final List<Map<String, dynamic>> data;
   _CatalogResponse(this.created, this.data);
+}
+
+/// Shared placeholder until the image provider produces its first decoded frame.
+Widget catalogImageFrame(
+    BuildContext context, Widget child, int? frame, bool synchronous) {
+  if (synchronous || frame != null) return child;
+  return const CatalogPlaceholder();
+}
+
+class CatalogPlaceholder extends StatelessWidget {
+  const CatalogPlaceholder({super.key});
+  @override
+  Widget build(BuildContext context) => const ColoredBox(
+        color: Color(0xDDFFF3D8),
+        child: Center(
+            child: Icon(Icons.image_outlined, size: 32, color: Color(0x556127C9))),
+      );
 }

@@ -23,7 +23,10 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
     // Keep the intro upright; the destination screen owns its orientation.
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || ModalRoute.of(context)?.isCurrent == false) return;
+      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    });
     _timeline = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 4500),

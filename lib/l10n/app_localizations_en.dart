@@ -446,4 +446,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get matchingPlayHint => 'Try to find all the matching pairs!';
+
+  @override
+  String get puzzleImageLoadError =>
+      'Could not load the picture. Please try again.';
+
+  @override
+  String get puzzleNewPuzzle => 'New Puzzle';
 }

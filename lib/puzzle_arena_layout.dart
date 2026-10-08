@@ -8,19 +8,21 @@ class PuzzleArenaLayout {
   final List<Rect> homes;
   const PuzzleArenaLayout(this.board, this.homes);
 
-  factory PuzzleArenaLayout.fit(Size size, int count, int rows, int columns) {
+  factory PuzzleArenaLayout.fit(Size size, int count, int rows, int columns,
+      {double imageAspect = boardAspect}) {
+    assert(imageAspect > 0 && imageAspect.isFinite);
     const gap = 14.0;
     final landscape = size.width > size.height;
     final header = landscape ? 62.0 : 72.0;
     final area = Rect.fromLTWH(
         8, header, size.width - 16, math.max(1, size.height - header - 16));
     final boardWidth = math.min(area.width * (landscape ? 0.38 : 0.60),
-        area.height * (landscape ? 0.91 : 0.66) * boardAspect);
+        area.height * (landscape ? 0.91 : 0.66) * imageAspect);
     final board = Rect.fromCenter(
         center: area.center,
         width: boardWidth,
-        height: boardWidth / boardAspect);
-    final aspect = boardAspect * rows / columns;
+        height: boardWidth / imageAspect);
+    final aspect = imageAspect * rows / columns;
     final homes = <Rect>[];
 
     void addBand(Rect band, int amount, int across, int down) {

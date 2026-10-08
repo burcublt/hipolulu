@@ -222,5 +222,7 @@
   "matchingPreviewInstruction": "They’ll flip over in a few seconds…",
   "matchingTapInstruction": "Tap two cards to find a match!",
   "matchingPreviewHint": "Memorize the cards!",
-  "matchingPlayHint": "Try to find all the matching pairs!"
+  "matchingPlayHint": "Try to find all the matching pairs!",
+  "puzzleImageLoadError": "Could not load the picture. Please try again.",
+  "puzzleNewPuzzle": "New Puzzle"
 }

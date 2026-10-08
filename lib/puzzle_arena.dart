@@ -1,3 +1,5 @@
+import 'puzzle_source_image.dart';
+import 'puzzle_sound_service.dart';
 import 'catalog_service.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -5,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'puzzle_arena_layout.dart';
 import 'puzzle_placement_effect.dart';
 import 'package:hippolulu/l10n/app_localizations.dart';
-import 'package:hippolulu/l10n/game_l10n.dart';
+import 'puzzle_completion_overlay.dart';
 
 /// Fraction of the board's width/height reserved for the static image
 /// "frame" around the edges. The jigsaw pieces are cut only from the
@@ -225,7 +227,7 @@ class PuzzleArena extends StatefulWidget {
 }
 
 class _PuzzleArenaState extends State<PuzzleArena>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   // pushReplacement briefly keeps both puzzle routes mounted.
   static int _activeArenas = 0;
   bool _introStarted = false;
@@ -237,13 +239,29 @@ class _PuzzleArenaState extends State<PuzzleArena>
   final Map<String, double> _settlingScales = {};
   bool wrongFlash = false;
   bool showWin = false;
+  final _sounds = PuzzleSoundService();
 
   late String imageAsset;
+  double? _imageAspect;
+  ImageStream? _sourceStream;
+  ImageStreamListener? _sourceListener;
 
-  // Win animation controllers
-  late AnimationController _winCtrl;
-  late AnimationController _celebCtrl;
-  final List<AnimationController> _starCtrls = [];
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_sourceStream != null) return;
+    _sourceStream = catalogImageProvider(imageAsset)
+        .resolve(createLocalImageConfiguration(context));
+    _sourceListener = ImageStreamListener((info, synchronous) {
+      final aspect = info.image.width / info.image.height;
+      info.dispose();
+      if (!mounted || _imageAspect == aspect) return;
+      setState(() => _imageAspect = aspect);
+    });
+    _sourceStream!.addListener(_sourceListener!);
+  }
+
+  late PuzzleCompletionController _completion;
 
   // ── Intro: "show the solved picture, then scatter the pieces" ──
   late AnimationController introCtrl;
@@ -302,15 +320,12 @@ class _PuzzleArenaState extends State<PuzzleArena>
     cols = grid.cols;
     pieces = generateGrid(rows, cols)..shuffle();
 
-    _winCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
-    _celebCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500))
-      ..repeat(reverse: true);
-    for (int i = 0; i < 3; i++) {
-      _starCtrls.add(AnimationController(
-          vsync: this, duration: const Duration(milliseconds: 400)));
-    }
+    WidgetsBinding.instance.addObserver(this);
+    _completion = PuzzleCompletionController(vsync: this)
+      ..addListener(() {
+        if (showWin && _completion.value * 2700 >= 570) _sounds.complete();
+      });
+    _sounds.preload();
 
     introCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 1600));
@@ -325,17 +340,18 @@ class _PuzzleArenaState extends State<PuzzleArena>
   /// pieces fly out to the tray.
   void _playIntro() {
     introCtrl.value = 0;
-    Future.delayed(const Duration(milliseconds: 700), () {
+    Future.delayed(const Duration(milliseconds: 2000), () {
       if (mounted) introCtrl.forward(from: 0);
     });
   }
 
   @override
   void dispose() {
-    _winCtrl.dispose();
-    _celebCtrl.dispose();
-    for (final c in _starCtrls) {
-      c.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _sounds.dispose();
+    _completion.dispose();
+    if (_sourceListener != null) {
+      _sourceStream?.removeListener(_sourceListener!);
     }
     introCtrl.dispose();
     _activeArenas--;
@@ -386,14 +402,17 @@ class _PuzzleArenaState extends State<PuzzleArena>
 
   void _handleDrop(String pieceId, String slotId,
       {Offset startOffset = Offset.zero, double startScale = 1}) {
+    if (showWin || placed.length == pieces.length) return;
     if (pieceId == slotId) {
       if (placed.contains(pieceId)) return;
       setState(() {
         placed.add(pieceId);
+        _sounds.correct(pieceId, finalPiece: placed.length == pieces.length);
         _settling[pieceId] = startOffset;
         _settlingScales[pieceId] = startScale;
       });
     } else {
+      _sounds.wrong();
       setState(() => wrongFlash = true);
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) setState(() => wrongFlash = false);
@@ -409,16 +428,23 @@ class _PuzzleArenaState extends State<PuzzleArena>
       if (placed.length == pieces.length && _settling.isEmpty) showWin = true;
     });
     if (showWin) {
-      _winCtrl.forward();
-      for (int i = 0; i < _starCtrls.length; i++) {
-        Future.delayed(Duration(milliseconds: 400 + i * 180), () {
-          if (mounted && showWin) _starCtrls[i].forward();
-        });
-      }
+      _completion.begin(reduceMotion: MediaQuery.disableAnimationsOf(context));
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) _sounds.stop();
+    if (state == AppLifecycleState.resumed && showWin) {
+      // Do not replay a celebration after returning from the background.
+      _sounds.enabled = false;
+      _completion.value = 1;
+      _sounds.enabled = true;
     }
   }
 
   void _handleReset() {
+    _sounds.reset();
     setState(() {
       placed.clear();
       _settling.clear();
@@ -427,17 +453,8 @@ class _PuzzleArenaState extends State<PuzzleArena>
       pieces.shuffle();
       introDone = false;
     });
-    _winCtrl.reset();
-    for (final c in _starCtrls) {
-      c.reset();
-    }
+    _completion.restartRound();
     _playIntro();
-  }
-
-  String get _puzzleName {
-    return CatalogService.instance
-            .title(imageAsset, Localizations.localeOf(context).languageCode) ??
-        AppLocalizations.of(context)!.itemTitle(imageAsset);
   }
 
   @override
@@ -452,7 +469,10 @@ class _PuzzleArenaState extends State<PuzzleArena>
                 children: [
                   Align(
                       alignment: Alignment.centerLeft,
-                      child: _BackButton(onTap: widget.onBack)),
+                      child: _BackButton(onTap: () {
+                        _sounds.stop();
+                        widget.onBack();
+                      })),
                   Expanded(
                       child: Center(
                           child: Column(
@@ -474,7 +494,7 @@ class _PuzzleArenaState extends State<PuzzleArena>
             ),
           );
         }
-        if (!_introStarted) {
+        if (_imageAspect != null && !_introStarted) {
           _introStarted = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) _playIntro();
@@ -528,6 +548,7 @@ class _PuzzleArenaState extends State<PuzzleArena>
                   pieces.length,
                   rows,
                   cols,
+                  imageAspect: _imageAspect ?? PuzzleArenaLayout.boardAspect,
                 );
                 final boardRect = layout.board;
 
@@ -552,7 +573,7 @@ class _PuzzleArenaState extends State<PuzzleArena>
                 Rect pieceTrayRect(int i) => layout.homes[i];
 
                 return AnimatedBuilder(
-                  animation: introCtrl,
+                  animation: Listenable.merge([introCtrl, _completion]),
                   builder: (context, _) {
                     return Stack(
                       key: _stackKey,
@@ -570,7 +591,10 @@ class _PuzzleArenaState extends State<PuzzleArena>
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _BackButton(onTap: widget.onBack),
+                              _BackButton(onTap: () {
+                                _sounds.stop();
+                                widget.onBack();
+                              }),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 14, vertical: 8),
@@ -606,226 +630,250 @@ class _PuzzleArenaState extends State<PuzzleArena>
                           ),
                         ),
 
-                        Positioned.fromRect(
-                          rect: boardRect.inflate(10),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [Color(0xFFFFDF83), Color(0xFFFFBB4D)],
+                        ...[
+                          Positioned.fromRect(
+                            rect: boardRect.inflate(10),
+                            child: DecoratedBox(
+                              key: const ValueKey('puzzle-stable-frame'),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Color(0xFFFFDF83),
+                                    Color(0xFFFFBB4D)
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(28),
+                                border: Border.all(
+                                    color: const Color(0xFFFFF8D5), width: 3),
+                                boxShadow: const [
+                                  BoxShadow(
+                                      color: Color(0xFFC58534),
+                                      offset: Offset(0, 4)),
+                                  BoxShadow(
+                                      color: Color(0x33714219),
+                                      offset: Offset(0, 7),
+                                      blurRadius: 10),
+                                ],
                               ),
-                              borderRadius: BorderRadius.circular(28),
-                              border: Border.all(
-                                  color: const Color(0xFFFFF8D5), width: 3),
-                              boxShadow: const [
-                                BoxShadow(
-                                    color: Color(0xFFC58534),
-                                    offset: Offset(0, 4)),
-                                BoxShadow(
-                                    color: Color(0x33714219),
-                                    offset: Offset(0, 7),
-                                    blurRadius: 10),
-                              ],
                             ),
                           ),
-                        ),
-                        // The opaque cream cover below reveals only pieces that
-                        // have not yet flown out or have been correctly placed.
-                        Positioned.fromRect(
-                          rect: boardRect,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image(
-                                image: catalogImageProvider(imageAsset),
-                                fit: BoxFit.cover),
+                          // The opaque cream cover below reveals only pieces that
+                          // have not yet flown out or have been correctly placed.
+                          Positioned.fromRect(
+                            rect: Rect.fromLTWH(boardRect.left + frameW,
+                                boardRect.top + frameH, innerW, innerH),
+                            child: PuzzleSourceImage(path: imageAsset),
                           ),
-                        ),
-                        if (wrongFlash)
+                          if (wrongFlash)
+                            Positioned.fromRect(
+                              rect: boardRect,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                    color: const Color(0xFFFF5050)
+                                        .withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(16)),
+                              ),
+                            ),
+
+                          // ── unified cover for all not-yet-solved pieces ──
+                          // Instead of drawing each unsolved cell's cover as its own
+                          // independent ClipPath (which can leave a hairline gap where
+                          // two adjacent curves don't rasterize in perfect agreement,
+                          // letting the picture underneath peek through), we union all
+                          // of their shapes into ONE path first. Any edge shared between
+                          // two unsolved neighbors becomes an interior edge of that union
+                          // and is never drawn at all — so there is nothing left that can
+                          // show a seam between them.
+                          Builder(builder: (context) {
+                            // Cover the picture's outer strip too, so no image
+                            // remains visible around the empty board's edges.
+                            var combinedCover = Path.combine(
+                              PathOperation.difference,
+                              Path()
+                                ..addRect(Rect.fromLTWH(0, 0, boardW, boardH)),
+                              Path()
+                                ..addRect(Rect.fromLTWH(
+                                  frameW,
+                                  frameH,
+                                  innerW,
+                                  innerH,
+                                )),
+                            );
+                            for (int i = 0; i < pieces.length; i++) {
+                              final p = pieces[i];
+                              final isPlacedNow = introDone
+                                  ? placed.contains(p.id) &&
+                                      !_settling.containsKey(p.id)
+                                  : _localProgress(i) <= 0.0;
+                              if (isPlacedNow) continue;
+                              final piecePath = JigsawClipper(
+                                      p,
+                                      cellW,
+                                      cellH,
+                                      frameW + p.col * cellW,
+                                      frameH + p.row * cellH)
+                                  .getClip(Size(boardW, boardH));
+                              combinedCover = Path.combine(PathOperation.union,
+                                  combinedCover, piecePath);
+                            }
+                            return Positioned.fromRect(
+                              rect: boardRect,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: ClipPath(
+                                  clipper: _StaticPathClipper(combinedCover),
+                                  child: const DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Color(0xFFFFEBCD),
+                                          Color(0xFFFFF3DB)
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+
                           Positioned.fromRect(
                             rect: boardRect,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                  color: const Color(0xFFFF5050)
-                                      .withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(16)),
+                            child: IgnorePointer(
+                              child: Opacity(
+                                  opacity: showWin
+                                      ? (1 - _completion.value * 2700 / 170)
+                                          .clamp(0.0, 1.0)
+                                      : 1,
+                                  child: CustomPaint(
+                                    painter: _PuzzleGuidePainter(
+                                        pieces, cellW, cellH, frameW, frameH),
+                                  )),
                             ),
                           ),
-
-                        // ── unified cover for all not-yet-solved pieces ──
-                        // Instead of drawing each unsolved cell's cover as its own
-                        // independent ClipPath (which can leave a hairline gap where
-                        // two adjacent curves don't rasterize in perfect agreement,
-                        // letting the picture underneath peek through), we union all
-                        // of their shapes into ONE path first. Any edge shared between
-                        // two unsolved neighbors becomes an interior edge of that union
-                        // and is never drawn at all — so there is nothing left that can
-                        // show a seam between them.
-                        Builder(builder: (context) {
-                          // Cover the picture's outer strip too, so no image
-                          // remains visible around the empty board's edges.
-                          var combinedCover = Path.combine(
-                            PathOperation.difference,
-                            Path()
-                              ..addRect(Rect.fromLTWH(0, 0, boardW, boardH)),
-                            Path()
-                              ..addRect(Rect.fromLTWH(
-                                frameW,
-                                frameH,
-                                innerW,
-                                innerH,
-                              )),
-                          );
-                          for (int i = 0; i < pieces.length; i++) {
-                            final p = pieces[i];
-                            final isPlacedNow = introDone
-                                ? placed.contains(p.id) &&
-                                    !_settling.containsKey(p.id)
-                                : _localProgress(i) <= 0.0;
-                            if (isPlacedNow) continue;
-                            final piecePath = JigsawClipper(
-                                    p,
-                                    cellW,
-                                    cellH,
-                                    frameW + p.col * cellW,
-                                    frameH + p.row * cellH)
-                                .getClip(Size(boardW, boardH));
-                            combinedCover = Path.combine(
-                                PathOperation.union, combinedCover, piecePath);
-                          }
-                          return Positioned.fromRect(
+                          // ── board drop target ──
+                          // ONE DragTarget covering the whole board, instead
+                          // of a separate small target per piece. We figure
+                          // out which cell a drop belongs to from *where* it
+                          // lands (nearest cell, clamped to the grid), which
+                          // is far more forgiving than requiring the piece to
+                          // land inside its own small, oftentimes-overlapping
+                          // target rect — that overlap was exactly what made
+                          // it so easy to "miss" on a phone, where fingers
+                          // are big relative to the cells.
+                          Positioned.fromRect(
                             rect: boardRect,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: ClipPath(
-                                clipper: _StaticPathClipper(combinedCover),
-                                child: const DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Color(0xFFFFEBCD),
-                                        Color(0xFFFFF3DB)
-                                      ],
+                            child: DragTarget<String>(
+                              onAcceptWithDetails: (details) {
+                                final pieceIndex = pieces
+                                    .indexWhere((p) => p.id == details.data);
+                                if (pieceIndex < 0 ||
+                                    placed.contains(details.data)) {
+                                  return;
+                                }
+                                final home = layout.homes[pieceIndex];
+                                final cell = _cellAt(
+                                  details.offset,
+                                  boardRect,
+                                  frameW,
+                                  frameH,
+                                  cellW,
+                                  cellH,
+                                  rows,
+                                  cols,
+                                  dragCenterOffset: Offset(
+                                      home.width * 0.5, home.height * 0.5),
+                                );
+                                if (cell == null) return;
+                                final target = pieces.firstWhere((p) =>
+                                    p.row == cell.row && p.col == cell.col);
+                                final box = _stackKey.currentContext!
+                                    .findRenderObject() as RenderBox;
+                                final dropCenter = box.globalToLocal(details
+                                        .offset +
+                                    Offset(home.width / 2, home.height / 2));
+                                final destination = pieceBoardRect(target);
+                                final delta = dropCenter - destination.center;
+                                _handleDrop(details.data, target.id,
+                                    startOffset: Offset(
+                                        delta.dx / destination.width,
+                                        delta.dy / destination.height),
+                                    startScale:
+                                        home.width * 1.2 / destination.width);
+                              },
+                              builder: (context, candidates, rejected) {
+                                // No hover highlight — keeps the board clean
+                                // while dragging.
+                                return const SizedBox.shrink();
+                              },
+                            ),
+                          ),
+
+                          // ── flying / resting tray pieces ──
+                          for (int i = 0; i < pieces.length; i++)
+                            if (!(introDone && placed.contains(pieces[i].id)) &&
+                                (introDone || _localProgress(i) > 0.0))
+                              Builder(builder: (context) {
+                                final local =
+                                    introDone ? 1.0 : _localProgress(i);
+                                final rect = Rect.lerp(
+                                    pieceBoardRect(pieces[i]),
+                                    pieceTrayRect(i),
+                                    local)!;
+                                const angle = 0.0;
+                                return Positioned.fromRect(
+                                  rect: rect,
+                                  child: Transform.rotate(
+                                    angle: angle,
+                                    child: IgnorePointer(
+                                      ignoring: !introDone,
+                                      child: _TrayPiece(
+                                        piece: pieces[i],
+                                        onWrongDrop: _sounds.wrong,
+                                        imageAsset: imageAsset,
+                                        rows: rows,
+                                        cols: cols,
+                                        // Incorrect drops return to their own home,
+                                        // keeping every piece visible and separated.
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-
-                        Positioned.fromRect(
-                          rect: boardRect,
-                          child: IgnorePointer(
-                            child: CustomPaint(
-                              painter: _PuzzleGuidePainter(
-                                  pieces, cellW, cellH, frameW, frameH),
-                            ),
-                          ),
-                        ),
-                        // ── board drop target ──
-                        // ONE DragTarget covering the whole board, instead
-                        // of a separate small target per piece. We figure
-                        // out which cell a drop belongs to from *where* it
-                        // lands (nearest cell, clamped to the grid), which
-                        // is far more forgiving than requiring the piece to
-                        // land inside its own small, oftentimes-overlapping
-                        // target rect — that overlap was exactly what made
-                        // it so easy to "miss" on a phone, where fingers
-                        // are big relative to the cells.
-                        Positioned.fromRect(
-                          rect: boardRect,
-                          child: DragTarget<String>(
-                            onAcceptWithDetails: (details) {
-                              final pieceIndex = pieces
-                                  .indexWhere((p) => p.id == details.data);
-                              if (pieceIndex < 0 ||
-                                  placed.contains(details.data)) {
-                                return;
-                              }
-                              final home = layout.homes[pieceIndex];
-                              final cell = _cellAt(
-                                details.offset,
-                                boardRect,
-                                frameW,
-                                frameH,
-                                cellW,
-                                cellH,
-                                rows,
-                                cols,
-                                dragCenterOffset:
-                                    Offset(home.width * 0.5, home.height * 0.5),
-                              );
-                              if (cell == null) return;
-                              final target = pieces.firstWhere((p) =>
-                                  p.row == cell.row && p.col == cell.col);
-                              final box = _stackKey.currentContext!
-                                  .findRenderObject() as RenderBox;
-                              final dropCenter = box.globalToLocal(
-                                  details.offset +
-                                      Offset(home.width / 2, home.height / 2));
-                              final destination = pieceBoardRect(target);
-                              final delta = dropCenter - destination.center;
-                              _handleDrop(details.data, target.id,
-                                  startOffset: Offset(
-                                      delta.dx / destination.width,
-                                      delta.dy / destination.height),
-                                  startScale:
-                                      home.width * 1.2 / destination.width);
-                            },
-                            builder: (context, candidates, rejected) {
-                              // No hover highlight — keeps the board clean
-                              // while dragging.
-                              return const SizedBox.shrink();
-                            },
-                          ),
-                        ),
-
-                        // ── flying / resting tray pieces ──
-                        for (int i = 0; i < pieces.length; i++)
-                          if (!(introDone && placed.contains(pieces[i].id)) &&
-                              (introDone || _localProgress(i) > 0.0))
-                            Builder(builder: (context) {
-                              final local = introDone ? 1.0 : _localProgress(i);
-                              final rect = Rect.lerp(pieceBoardRect(pieces[i]),
-                                  pieceTrayRect(i), local)!;
-                              const angle = 0.0;
-                              return Positioned.fromRect(
-                                rect: rect,
-                                child: Transform.rotate(
-                                  angle: angle,
-                                  child: IgnorePointer(
-                                    ignoring: !introDone,
+                                );
+                              }),
+                          for (final piece in pieces)
+                            if (_settling.containsKey(piece.id))
+                              Positioned.fromRect(
+                                  rect: pieceBoardRect(piece),
+                                  child: PuzzlePlacementEffect(
+                                    key: ValueKey('placement-${piece.id}'),
+                                    startOffset: _settling[piece.id]!,
+                                    startScale: _settlingScales[piece.id]!,
+                                    onCompleted: () =>
+                                        _finishPlacement(piece.id),
                                     child: _TrayPiece(
-                                      piece: pieces[i],
-                                      imageAsset: imageAsset,
-                                      rows: rows,
-                                      cols: cols,
-                                      // Incorrect drops return to their own home,
-                                      // keeping every piece visible and separated.
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
-                        for (final piece in pieces)
-                          if (_settling.containsKey(piece.id))
-                            Positioned.fromRect(
-                                rect: pieceBoardRect(piece),
-                                child: PuzzlePlacementEffect(
-                                  key: ValueKey('placement-${piece.id}'),
-                                  startOffset: _settling[piece.id]!,
-                                  startScale: _settlingScales[piece.id]!,
-                                  onCompleted: () => _finishPlacement(piece.id),
-                                  child: _TrayPiece(
-                                      piece: piece,
-                                      imageAsset: imageAsset,
-                                      rows: rows,
-                                      cols: cols,
-                                      draggable: false),
-                                )),
+                                        piece: piece,
+                                        imageAsset: imageAsset,
+                                        rows: rows,
+                                        cols: cols,
+                                        draggable: false),
+                                  )),
+                        ],
+                        if (showWin)
+                          Positioned.fill(
+                              child: PuzzleCompletionOverlay(
+                            timeline: _completion,
+                            board: boardRect,
+                            imagePath: imageAsset,
+                            onReplay: _handleReset,
+                            onNext: () {
+                              _sounds.stop();
+                              (_resolvedOnNextGame ?? widget.onBack)();
+                            },
+                          )),
                       ],
                     );
                   },
@@ -833,18 +881,6 @@ class _PuzzleArenaState extends State<PuzzleArena>
               },
             ),
           ),
-          if (showWin)
-            _WinOverlay(
-              animalName: _puzzleName,
-              winCtrl: _winCtrl,
-              celebCtrl: _celebCtrl,
-              starCtrls: _starCtrls,
-              onReset: _handleReset,
-              onBack: widget.onBack,
-              onNextGame: _resolvedOnNextGame ?? () {},
-              placedCount: placed.length,
-              totalCount: pieces.length,
-            ),
         ],
       ),
     );
@@ -880,11 +916,13 @@ class _PuzzleGuidePainter extends CustomPainter {
 
 class _TrayPiece extends StatelessWidget {
   final bool draggable;
+  final VoidCallback? onWrongDrop;
   final JigsawPiece piece;
   final String imageAsset;
   final int rows, cols;
   const _TrayPiece(
       {this.draggable = true,
+      this.onWrongDrop,
       required this.piece,
       required this.imageAsset,
       required this.rows,
@@ -902,14 +940,9 @@ class _TrayPiece extends StatelessWidget {
         double overflowW = cellW * 0.3;
         double overflowH = cellH * 0.3;
 
-        // The grid only covers the inner (1 - 2*kFrameFraction) portion of the
-        // full image — render the FULL image at a proportionally larger
-        // virtual size, then shift it by the frame offset, exactly mirroring
-        // what the board does, so tray and board always crop identically.
-        double boardW = cellW * cols / (1 - 2 * kFrameFraction);
-        double boardH = cellH * rows / (1 - 2 * kFrameFraction);
-        double frameW = boardW * kFrameFraction;
-        double frameH = boardH * kFrameFraction;
+        // Match the board's inner image canvas; the frame never crops it.
+        final boardW = cellW * cols;
+        final boardH = cellH * rows;
 
         Widget content = Center(
           child: SizedBox(
@@ -917,20 +950,22 @@ class _TrayPiece extends StatelessWidget {
             height: cellH + overflowH * 2,
             child: PhysicalShape(
               elevation: 4,
-              color: const Color(0xFFFFE5AC),
+              color: Colors.transparent,
               shadowColor: const Color(0xAA774519),
               clipBehavior: Clip.antiAlias,
-              clipper: JigsawClipper(piece, cellW, cellH, overflowW, overflowH),
+              // Board masks overlap to hide seams, but a movable piece must
+              // stop exactly at its source image edge. Inflation here exposes
+              // the backing color along outer rows/columns.
+              clipper: JigsawClipper(piece, cellW, cellH, overflowW, overflowH,
+                  edgeInflation: 0),
               child: Stack(
                 children: [
                   Positioned(
-                    left: -(frameW + piece.col * cellW) + overflowW,
-                    top: -(frameH + piece.row * cellH) + overflowH,
+                    left: -piece.col * cellW + overflowW,
+                    top: -piece.row * cellH + overflowH,
                     width: boardW,
                     height: boardH,
-                    child: Image(
-                        image: catalogImageProvider(imageAsset),
-                        fit: BoxFit.cover),
+                    child: PuzzleSourceImage(path: imageAsset),
                   ),
                   Positioned.fill(
                     child: Container(
@@ -949,6 +984,7 @@ class _TrayPiece extends StatelessWidget {
 
         if (!draggable) return content;
         return Draggable<String>(
+          onDraggableCanceled: (_, __) => onWrongDrop?.call(),
           key: ValueKey('puzzle-piece-${piece.id}'),
           data: piece.id,
           maxSimultaneousDrags: 1,
@@ -959,9 +995,12 @@ class _TrayPiece extends StatelessWidget {
                 child: Opacity(
                     opacity: 0.9,
                     child: SizedBox(
-                        width: widgetW, height: widgetH, child: content))),
+                        width: widgetW,
+                        height: widgetH,
+                        child: RepaintBoundary(child: content)))),
           ),
-          childWhenDragging: Opacity(opacity: 0.3, child: content),
+          childWhenDragging:
+              Opacity(opacity: 0.3, child: RepaintBoundary(child: content)),
           child: content,
         );
       },
@@ -1033,349 +1072,3 @@ class _BackButtonState extends State<_BackButton> {
 //  WIN OVERLAY
 // ─────────────────────────────────────────────
 //
-const _celebrationAssets = 'assets/puzzle/level_complete/';
-
-class _WinOverlay extends StatelessWidget {
-  final String animalName;
-  final AnimationController winCtrl, celebCtrl;
-  final List<AnimationController> starCtrls;
-  final VoidCallback onReset, onBack, onNextGame;
-  final int placedCount, totalCount;
-
-  const _WinOverlay({
-    required this.animalName,
-    required this.winCtrl,
-    required this.celebCtrl,
-    required this.starCtrls,
-    required this.onReset,
-    required this.onBack,
-    required this.onNextGame,
-    required this.placedCount,
-    required this.totalCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: CurvedAnimation(parent: winCtrl, curve: Curves.easeIn),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset('${_celebrationAssets}background.webp',
-              fit: BoxFit.cover),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _BackButton(onTap: onBack),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF5DF),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: Colors.white, width: 2),
-                          boxShadow: const [
-                            BoxShadow(
-                                color: Color(0x55764B21),
-                                offset: Offset(0, 3),
-                                blurRadius: 6)
-                          ],
-                        ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.extension_rounded,
-                              color: Color(0xFF11A9F1), size: 28),
-                          const SizedBox(width: 10),
-                          Text('$placedCount / $totalCount',
-                              style: const TextStyle(
-                                fontFamily: 'Baloo2 ExtraBold',
-                                fontSize: 22,
-                                color: Color(0xFF784226),
-                                fontWeight: FontWeight.w900,
-                              )),
-                        ]),
-                      ),
-                    ],
-                  ),
-                  Expanded(
-                    child: LayoutBuilder(builder: (context, constraints) {
-                      final width = min(
-                          constraints.maxWidth, constraints.maxHeight * 1.5);
-                      return Center(
-                        child: SizedBox(
-                          width: width,
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Positioned.fill(
-                                child: IgnorePointer(
-                                  child: AnimatedBuilder(
-                                    animation: celebCtrl,
-                                    builder: (_, child) => Opacity(
-                                      opacity: 0.65 + celebCtrl.value * 0.25,
-                                      child: child,
-                                    ),
-                                    child: Image.asset(
-                                        '${_celebrationAssets}glow.webp',
-                                        fit: BoxFit.contain),
-                                  ),
-                                ),
-                              ),
-                              ...List.generate(16, (index) {
-                                const assets = [
-                                  'star',
-                                  'pink_confetti',
-                                  'blue_confetti',
-                                  'green_confetti',
-                                  'purple_confetti',
-                                  'sparkle'
-                                ];
-                                final x = [
-                                  0.04,
-                                  0.87,
-                                  0.18,
-                                  0.77,
-                                  0.02,
-                                  0.91,
-                                  0.12,
-                                  0.82
-                                ][index % 8];
-                                final y = (index ~/ 2) / 9;
-                                final side =
-                                    width * (index % 6 == 0 ? 0.11 : 0.065);
-                                return Positioned(
-                                  left: x * (width - side),
-                                  top: y * (constraints.maxHeight - side),
-                                  width: side,
-                                  height: side,
-                                  child: IgnorePointer(
-                                      child: Image.asset(
-                                          '$_celebrationAssets${assets[index % assets.length]}.webp')),
-                                );
-                              }),
-                              Positioned(
-                                top: constraints.maxHeight * 0.21,
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                child: ScaleTransition(
-                                  scale: Tween<double>(begin: 0.88, end: 1)
-                                      .animate(CurvedAnimation(
-                                          parent: winCtrl,
-                                          curve: Curves.easeOutBack)),
-                                  child: Image.asset(
-                                      '${_celebrationAssets}hippoInBox.webp',
-                                      alignment: Alignment.bottomCenter,
-                                      fit: BoxFit.contain),
-                                ),
-                              ),
-                              Positioned(
-                                top: 0,
-                                left: width * 0.06,
-                                right: width * 0.06,
-                                height: constraints.maxHeight * 0.27,
-                                child: FittedBox(
-                                  fit: BoxFit.contain,
-                                  child: _CelebrationTitle(
-                                      text: AppLocalizations.of(context)!
-                                          .awesome),
-                                ),
-                              ),
-                              Positioned(
-                                left: 8,
-                                right: 8,
-                                bottom: 12,
-                                child: Center(
-                                  child: ConstrainedBox(
-                                    constraints:
-                                        const BoxConstraints(maxWidth: 460),
-                                    child: Row(children: [
-                                      Expanded(
-                                          child: _WinButton(
-                                        label: AppLocalizations.of(context)!
-                                            .playAgain,
-                                        icon: Icons.refresh_rounded,
-                                        colors: const [
-                                          Color(0xFF9CEC34),
-                                          Color(0xFF35B514)
-                                        ],
-                                        onTap: onReset,
-                                      )),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                          child: _WinButton(
-                                        label: 'Diğer Oyuna Geç',
-                                        icon: Icons.arrow_forward_rounded,
-                                        colors: const [
-                                          Color(0xFF45D6FF),
-                                          Color(0xFF0094F4)
-                                        ],
-                                        onTap: onNextGame,
-                                      )),
-                                    ]),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CelebrationTitle extends StatelessWidget {
-  final String text;
-  const _CelebrationTitle({required this.text});
-
-  static const _style = TextStyle(
-    fontFamily: 'Baloo2 ExtraBold',
-    fontSize: 90,
-    height: 1.2,
-    fontWeight: FontWeight.w900,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final letters = text.characters.toList();
-    final widths = letters.map((letter) {
-      final painter = TextPainter(
-        text: TextSpan(text: letter, style: _style),
-        textDirection: Directionality.of(context),
-      )..layout();
-      final width = painter.width;
-      painter.dispose();
-      return width;
-    }).toList();
-    final totalWidth = widths.fold<double>(0, (sum, width) => sum + width);
-    final rise = totalWidth * 0.10;
-    const padding = 28.0;
-    var left = 0.0;
-    final glyphs = <Widget>[];
-    for (var i = 0; i < letters.length; i++) {
-      final width = widths[i];
-      final position =
-          totalWidth == 0 ? 0.0 : (left + width / 2) / totalWidth * 2 - 1;
-      glyphs.add(Positioned(
-        left: padding + left,
-        top: padding + rise * position * position,
-        child: Transform.rotate(
-          angle: atan(0.4 * position),
-          child: _letter(letters[i]),
-        ),
-      ));
-      left += width;
-    }
-    return Semantics(
-      label: text,
-      header: true,
-      child: ExcludeSemantics(
-        child: SizedBox(
-          width: totalWidth + padding * 2,
-          height: 108 + rise + padding * 2,
-          child: Stack(clipBehavior: Clip.none, children: glyphs),
-        ),
-      ),
-    );
-  }
-
-  Widget _letter(String letter) => Stack(clipBehavior: Clip.none, children: [
-        Text(letter,
-            style: _style.copyWith(
-              foreground: Paint()
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = 14
-                ..color = const Color(0xFF8F1EC4),
-              shadows: const [
-                Shadow(
-                    color: Color(0xFF5B148F),
-                    offset: Offset(0, 7),
-                    blurRadius: 3)
-              ],
-            )),
-        Text(letter,
-            style: _style.copyWith(
-                foreground: Paint()
-                  ..style = PaintingStyle.stroke
-                  ..strokeWidth = 3
-                  ..color = const Color(0xFFFFF5B2))),
-        ShaderMask(
-          blendMode: BlendMode.srcIn,
-          shaderCallback: (bounds) => const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFFF499), Color(0xFFFFCF27), Color(0xFFFF9E19)],
-          ).createShader(bounds),
-          child: Text(letter, style: _style.copyWith(color: Colors.white)),
-        ),
-      ]);
-}
-
-class _WinButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final List<Color> colors;
-  final VoidCallback onTap;
-  const _WinButton(
-      {required this.label,
-      required this.icon,
-      required this.colors,
-      required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: colors),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white, width: 3),
-        boxShadow: [
-          BoxShadow(
-              color: colors.last.withValues(alpha: 0.45),
-              offset: const Offset(0, 4),
-              blurRadius: 7)
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(999),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(icon, color: Colors.white, size: 22),
-              const SizedBox(width: 8),
-              Flexible(
-                  child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(label,
-                    maxLines: 1,
-                    style: const TextStyle(
-                      fontFamily: 'Baloo2 ExtraBold',
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                    )),
-              )),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-}

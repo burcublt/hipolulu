@@ -927,6 +927,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try to find all the matching pairs!'**
   String get matchingPlayHint;
+
+  /// No description provided for @puzzleImageLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the picture. Please try again.'**
+  String get puzzleImageLoadError;
+
+  /// No description provided for @puzzleNewPuzzle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Puzzle'**
+  String get puzzleNewPuzzle;
 }
 
 class _AppLocalizationsDelegate

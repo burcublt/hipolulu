@@ -18,7 +18,9 @@ import 'unlock_screen.dart';
 // ─────────────────────────────────────────────
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  // Hot restart can retain the previous route's native landscape mask.
+  // Release it first; splash applies its lock after the first rendered frame.
+  await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
   final localeProvider = LocaleProvider();
   await localeProvider.load();
   await AssetService().load();
