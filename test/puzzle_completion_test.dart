@@ -39,6 +39,14 @@ void main() {
         expect(rect.right, lessThanOrEqualTo(size.width));
         expect(rect.height, greaterThanOrEqualTo(48));
       }
+      // Verify the painted face, not just the outer button hit target.
+      final faces = find.byKey(const ValueKey('completion-button-face'));
+      expect(faces, findsNWidgets(2));
+      for (final face in faces.evaluate()) {
+        final bounds = tester.getRect(find.byWidget(face.widget));
+        expect(bounds.height, greaterThanOrEqualTo(48));
+        if (size == const Size(1180, 820)) expect(bounds.height, 96);
+      }
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       c.dispose();

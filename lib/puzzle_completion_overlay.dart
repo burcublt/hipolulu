@@ -86,19 +86,22 @@ class _PuzzleCompletionOverlayState extends State<PuzzleCompletionOverlay> {
             final size = constraints.biggest;
             final board = widget.board;
             final groupWidth = math.min(size.width * .86, 760.0);
-            final bottomSpace = size.height - board.bottom - 18;
+            const actionGap = 34.0;
+            final bottomSpace = size.height - board.bottom - actionGap - 12;
             final sideActions = bottomSpace < 48;
             final stacked = sideActions;
-            final actionsHeight =
-                sideActions ? 112.0 : math.min(72.0, bottomSpace);
+            final actionsHeight = sideActions
+                ? math.min(184.0, board.height)
+                : math.min(96.0, bottomSpace);
             final buttonWidth = sideActions
-                ? math.max(100.0, (size.width - board.width) / 2 - 28)
-                : math.min(groupWidth, math.max(board.width, 400.0));
+                ? math.max(100.0, (size.width - board.width) / 2 - 40)
+                : math.min(groupWidth, math.max(board.width * 1.1, 520.0));
             final actionLeft =
-                sideActions ? board.right + 18 : (size.width - buttonWidth) / 2;
-            final actionTop =
-                sideActions ? board.bottom - actionsHeight : board.bottom + 14;
-            final top = board.top < 126 ? 4.0 : 62.0;
+                sideActions ? board.right + 28 : (size.width - buttonWidth) / 2;
+            final actionTop = sideActions
+                ? board.bottom - actionsHeight
+                : board.bottom + actionGap;
+            final top = board.top < 126 ? 4.0 : math.max(62.0, board.top - 150);
             final titleHeight = math.max(1.0, board.top - top - 14);
             final l10n = AppLocalizations.of(context)!;
             return Stack(clipBehavior: Clip.hardEdge, children: [
@@ -171,8 +174,8 @@ class _PuzzleCompletionOverlayState extends State<PuzzleCompletionOverlay> {
                                                 onTap: () =>
                                                     _act(widget.onReplay))),
                                         SizedBox(
-                                            width: stacked ? 0 : 12,
-                                            height: stacked ? 12 : 0),
+                                            width: stacked ? 0 : 18,
+                                            height: stacked ? 16 : 0),
                                         Expanded(
                                             child: _CompletionButton(
                                                 label: l10n.puzzleNewPuzzle,
@@ -205,149 +208,150 @@ class _CompletionButtonState extends State<_CompletionButton> {
   bool _pressed = false;
   @override
   Widget build(BuildContext context) {
-    final label = widget.label, icon = widget.icon;
-    final color = widget.color;
-    final onTap = widget.onTap;
-    final orange = color == const Color(0xFFFF851A);
-    final darkOutline =
-        orange ? const Color(0xFFD86B00) : const Color(0xFF0066B3);
-
+    final orange = widget.color == const Color(0xFFFF851A);
+    final textShadow =
+        orange ? const Color(0xFFB95608) : const Color(0xFF0067AD);
     return Listener(
-        onPointerDown: (_) => setState(() => _pressed = true),
-        onPointerUp: (_) => setState(() => _pressed = false),
-        onPointerCancel: (_) => setState(() => _pressed = false),
-        child: AnimatedScale(
-            scale: _pressed ? .96 : 1,
-            duration: const Duration(milliseconds: 100),
-            child: Transform.translate(
-                offset: Offset(0, _pressed ? 3 : 0),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    boxShadow: [
-                      BoxShadow(
-                        color: darkOutline.withValues(alpha: 0.25),
-                        offset: const Offset(0, 8),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: onTap,
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      elevation: 0,
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999)),
-                    ),
-                    child: CustomPaint(
-                      painter: _CandyButtonPainter(orange),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 7),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Image.asset(icon,
-                                width: 34, height: 34, fit: BoxFit.contain),
-                            const SizedBox(width: 10),
-                            Flexible(
-                              child: FittedBox(
+      onPointerDown: (_) => setState(() => _pressed = true),
+      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerCancel: (_) => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? .97 : 1,
+        duration: const Duration(milliseconds: 100),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withValues(alpha: .12),
+                    offset: const Offset(0, 7),
+                    blurRadius: 10)
+              ]),
+          child: ElevatedButton(
+            onPressed: widget.onTap,
+            style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.zero,
+                elevation: 0,
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                shadowColor: Colors.transparent,
+                shape: const StadiumBorder()),
+            child: SizedBox.expand(
+                child: TweenAnimationBuilder<double>(
+              tween: Tween(end: _pressed ? 1 : 0),
+              duration: const Duration(milliseconds: 100),
+              builder: (context, press, child) => CustomPaint(
+                  key: const ValueKey('completion-button-face'),
+                  painter: _CandyButtonPainter(orange, press),
+                  child: Transform.translate(
+                      offset: Offset(0, press * 3.5), child: child)),
+              child: Padding(
+                  padding:
+                      const EdgeInsets.only(left: 16, right: 16, top: 4, bottom: 12),
+                  child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Image.asset(widget.icon,
+                            width: 42, height: 42, fit: BoxFit.contain),
+                        const SizedBox(width: 12),
+                        Flexible(
+                            child: FittedBox(
                                 fit: BoxFit.scaleDown,
-                                child: Text(
-                                  label,
-                                  style: TextStyle(
-                                    fontFamily: 'Baloo2 ExtraBold',
-                                    fontSize: 24,
-                                    color: Colors.white,
-                                    shadows: [
-                                      Shadow(
-                                        color:
-                                            darkOutline.withValues(alpha: 0.6),
-                                        offset: const Offset(0, 2),
-                                        blurRadius: 2,
-                                      )
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ))));
+                                child: Text(widget.label,
+                                    style: TextStyle(
+                                        fontFamily: 'Baloo2 ExtraBold',
+                                        fontSize: 26,
+                                        color: Colors.white,
+                                        shadows: [
+                                          Shadow(
+                                              color: textShadow.withValues(
+                                                  alpha: .65),
+                                              offset: const Offset(0, 2),
+                                              blurRadius: 1.5)
+                                        ])))),
+                      ])),
+            )),
+          ),
+        ),
+      ),
+    );
   }
 }
 
 class _CandyButtonPainter extends CustomPainter {
   final bool orange;
-  const _CandyButtonPainter(this.orange);
+  final double press;
+  const _CandyButtonPainter(this.orange, this.press);
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    final radius = Radius.circular(size.height / 2);
+    void solid(Rect bounds, Color color) => canvas.drawRRect(
+        RRect.fromRectAndRadius(bounds, Radius.circular(bounds.height / 2)),
+        Paint()..color = color);
 
-    // Outer thin stroke
-    final darkColor =
-        orange ? const Color(0xFFD86B00) : const Color(0xFF0066B3);
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, radius), Paint()..color = darkColor);
-
-    // 3D Depth bottom shadow
+    // 1. Dark thin border around everything
+    solid(rect, orange ? const Color(0xFFB94708) : const Color(0xFF005597));
+    
+    // 2. 3D depth block
     final depthRect = rect.deflate(1.5);
-    final depthColor =
-        orange ? const Color(0xFFFF9400) : const Color(0xFF008EE6);
+    solid(depthRect, orange ? const Color(0xFFE56A00) : const Color(0xFF0073CC));
+
+    // 3. White face
+    final face = Rect.fromLTRB(depthRect.left, depthRect.top, depthRect.right, depthRect.bottom - 8)
+        .shift(Offset(0, press * 3.5));
+    solid(face, Colors.white);
+    
+    // 4. Inner colored face
+    final inner = face.deflate(4);
+    final gradient = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: orange
+            ? [
+                const Color(0xFFFFF070),
+                const Color(0xFFFFCC00),
+                const Color(0xFFFF9900),
+              ]
+            : [
+                const Color(0xFF88E8FF),
+                const Color(0xFF20C5FF),
+                const Color(0xFF0095FF),
+              ],
+        stops: const [0, .45, 1]);
     canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            depthRect, Radius.circular(depthRect.height / 2)),
-        Paint()..color = depthColor);
-
-    // White border (shifted up to reveal depth at bottom)
-    final faceRect = Rect.fromLTRB(
-        rect.left + 2, rect.top + 2, rect.right - 2, rect.bottom - 8);
-    final faceRadius = Radius.circular(faceRect.height / 2);
-    canvas.drawRRect(RRect.fromRectAndRadius(faceRect, faceRadius),
-        Paint()..color = Colors.white);
-
-    // Inner gradient face
-    final innerFaceRect = faceRect.deflate(3);
-    final innerFaceRadius = Radius.circular(innerFaceRect.height / 2);
-    final innerGradient = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: orange
-          ? [const Color(0xFFFFDF4A), const Color(0xFFFF8C00)]
-          : [const Color(0xFF4DE6FF), const Color(0xFF009DF5)],
-    );
-    canvas.drawRRect(RRect.fromRectAndRadius(innerFaceRect, innerFaceRadius),
-        Paint()..shader = innerGradient.createShader(innerFaceRect));
-
-    // Top shine
-    final shineRect = Rect.fromLTRB(
-        innerFaceRect.left + 10,
-        innerFaceRect.top + 2,
-        innerFaceRect.right - 10,
-        innerFaceRect.top + innerFaceRect.height * 0.45);
-    final shineRadius = Radius.circular(shineRect.height / 2);
-    final shineGradient = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [
-        Colors.white.withValues(alpha: 0.7),
-        Colors.white.withValues(alpha: 0.0)
-      ],
-    );
-    canvas.drawRRect(RRect.fromRectAndRadius(shineRect, shineRadius),
-        Paint()..shader = shineGradient.createShader(shineRect));
+        RRect.fromRectAndRadius(inner, Radius.circular(inner.height / 2)),
+        Paint()..shader = gradient.createShader(inner));
+        
+    // 5. Top highlight shine
+    final shine = Rect.fromLTRB(inner.left + 12, inner.top + 2,
+        inner.right - 12, inner.top + inner.height * .4);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(shine, Radius.circular(shine.height / 2)),
+        Paint()
+          ..shader = const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x99FFFFFF), Color(0x00FFFFFF)])
+              .createShader(shine));
+              
+    // 6. Thin specular reflection arc
+    final specular = inner.deflate(1);
+    canvas.save();
+    canvas.clipRect(Rect.fromLTRB(
+        inner.left, inner.top, inner.right, inner.top + inner.height * .25));
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(specular, Radius.circular(specular.height / 2)),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5
+          ..color = Colors.white.withValues(alpha: .8));
+    canvas.restore();
   }
 
   @override
-  bool shouldRepaint(_CandyButtonPainter old) => old.orange != orange;
+  bool shouldRepaint(_CandyButtonPainter old) =>
+      old.orange != orange || old.press != press;
 }
 
 class _CelebrationHeading extends StatelessWidget {
@@ -357,51 +361,68 @@ class _CelebrationHeading extends StatelessWidget {
   Widget build(BuildContext context) {
     const base = TextStyle(
         fontFamily: 'Baloo2 ExtraBold',
-        fontSize: 78,
-        height: 1,
+        fontSize: 84,
+        height: .92,
         letterSpacing: -1.0);
+    // Each localized grapheme follows the same elliptical arc in every layer.
+    // Keeping layers separate prevents a later glyph's outline hiding a face.
+    Widget curved(TextStyle style) {
+      final glyphs = text.characters.toList();
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        for (var i = 0; i < glyphs.length; i++)
+          Builder(builder: (_) {
+            final t = glyphs.length < 2 ? 0.0 : 2 * i / (glyphs.length - 1) - 1;
+            final y = 22 * (1 - math.sqrt(1 - .75 * t * t));
+            return Transform.translate(
+              offset: Offset(0, y),
+              child: Transform.rotate(
+                  angle: t * .22, child: Text(glyphs[i], style: style)),
+            );
+          }),
+      ]);
+    }
+
     Widget stroke(Color color, double width, {double dy = 0}) =>
         Transform.translate(
             offset: Offset(0, dy),
-            child: Text(text,
-                style: base.copyWith(
-                    foreground: Paint()
-                      ..style = PaintingStyle.stroke
-                      ..strokeWidth = width
-                      ..strokeJoin = StrokeJoin.round
-                      ..color = color)));
+            child: curved(base.copyWith(
+                foreground: Paint()
+                  ..style = PaintingStyle.stroke
+                  ..strokeWidth = width
+                  ..strokeJoin = StrokeJoin.round
+                  ..color = color)));
     return Semantics(
         label: text,
         child: ExcludeSemantics(
             child: Padding(
-          padding: const EdgeInsets.fromLTRB(15, 10, 15, 20),
-          child: Stack(children: [
+          padding: const EdgeInsets.fromLTRB(32, 25, 32, 42),
+          child: Stack(clipBehavior: Clip.none, children: [
             // Dark purple drop shadow/depth
-            stroke(const Color(0xFF7514B3), 28, dy: 8),
+            stroke(const Color(0xFF68129E), 30, dy: 8),
             // Outer Purple stroke
-            stroke(const Color(0xFFA224F5), 28),
+            stroke(const Color(0xFFA224F5), 30),
             // Inner Pink stroke
-            stroke(const Color(0xFFFF57E5), 14),
-            // Warm bevel under the face and a narrow upper specular edge.
-            stroke(const Color(0xFFC56B07), 2, dy: 2),
-            stroke(const Color(0xFFFFF4A0), 1.5, dy: -1),
-            // Yellow-Orange Gradient text
+            stroke(const Color(0xFFFF57E5), 18),
+            // White outline around the text
+            stroke(Colors.white, 8),
+            
+            // Text Fill
             ShaderMask(
                 blendMode: BlendMode.srcIn,
                 shaderCallback: (rect) => const LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Color(0xFFFFF35A),
-                          Color(0xFFFFC019),
-                          Color(0xFFFF8500)
+                          Color(0xFFFFF700), // Vibrant Yellow
+                          Color(0xFFFFB800), // Orange-Yellow
+                          Color(0xFFFF7A00)  // Orange
                         ],
                         stops: [
                           0.0,
                           0.45,
                           1.0
                         ]).createShader(rect),
-                child: Text(text, style: base.copyWith(color: Colors.white))),
+                child: curved(base.copyWith(color: Colors.white))),
           ]),
         )));
   }
